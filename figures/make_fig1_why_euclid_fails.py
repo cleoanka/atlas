@@ -30,49 +30,42 @@ def two_spirals(n=520, noise=0.28, seed=0):
 def main():
     st.setup()
     X, lab = two_spirals()
-    # anchor: a point on arm 0, out along the arm where the other arm passes close
     arm0 = np.where(lab == 0)[0]
     r = np.linalg.norm(X, axis=1)
     p = arm0[np.argmin(np.abs(r[arm0] - 6.5))]
 
-    # Euclidean neighborhood: ball of radius R (sized so it clearly bites the other arm)
     R = 3.2
     eucl = np.linalg.norm(X - X[p], axis=1) <= R
-
-    # graph neighborhood: shortest path on kNN graph within a geodesic budget
     G = kneighbors_graph(X, 8, mode="distance", include_self=False)
     G = G.maximum(G.T)
     dist = csgraph.dijkstra(G, indices=p)
-    budget = np.percentile(dist[np.isfinite(dist)], 12)   # comparable neighborhood size
+    budget = np.percentile(dist[np.isfinite(dist)], 12)
     graph_nb = dist <= budget
 
-    fig, axes = plt.subplots(1, 2, figsize=(13, 6.4))
-    for ax, sel, title, note in [
-        (axes[0], eucl, "Euclidean “near”", "the ball reaches the other arm"),
-        (axes[1], graph_nb, "Graph “near”", "the neighborhood follows the arm")]:
-        # base points, distinct by arm
-        for c, col in [(0, st.OK["sky"]), (1, st.OK["orange"])]:
+    fig = plt.figure(figsize=(12.4, 6.6))
+    st.header(fig, "The metric decides who counts as a neighbour",
+              "same point, same neighbourhood size — only the notion of distance changes",
+              accent=st.BLUE)
+    axes = [fig.add_axes([0.04, 0.03, 0.44, 0.72]), fig.add_axes([0.53, 0.03, 0.44, 0.72])]
+    for ax, sel, title, note, ok in [
+        (axes[0], eucl, "Euclidean “near”", "the ball reaches the other arm", False),
+        (axes[1], graph_nb, "Graph “near”", "the neighbourhood follows the arm", True)]:
+        for c, col in [(0, st.BLUE), (1, st.ORANGE)]:
             m = lab == c
-            ax.scatter(X[m, 0], X[m, 1], s=16, c=col, alpha=0.45, zorder=1)
-        # highlighted neighborhood — solid, ringed so it pops on either arm colour
-        ax.scatter(X[sel, 0], X[sel, 1], s=46, c=st.OK["vermillion"],
+            ax.scatter(X[m, 0], X[m, 1], s=16, c=col, alpha=0.40, zorder=1)
+        ax.scatter(X[sel, 0], X[sel, 1], s=48, c=st.GREEN if ok else st.RED,
                    edgecolors="white", linewidths=0.7, zorder=3)
-        # how many of the neighbors are on the WRONG arm
         wrong = int(((lab != lab[p]) & sel).sum())
-        ax.scatter([X[p, 0]], [X[p, 1]], s=340, marker="*", c=st.OK["black"],
-                   edgecolors="white", linewidths=1.2, zorder=5)
-        if ax is axes[0]:
-            circ = plt.Circle((X[p, 0], X[p, 1]), R, fill=False, ls="--",
-                              ec=st.OK["vermillion"], lw=2.0, zorder=4)
-            ax.add_patch(circ)
-        ax.set_title(title)
-        ax.text(0.5, -0.06, f"{note}\n({wrong} neighbors on the other arm)",
-                transform=ax.transAxes, ha="center", va="top", fontsize=13,
-                color=st.OK["vermillion"] if wrong else st.OK["green"], fontweight="bold")
-        ax.set_aspect("equal"); ax.set_xticks([]); ax.set_yticks([])
-        ax.spines[:].set_visible(False)
-    fig.suptitle("Same point, same neighborhood size — the metric decides who is a neighbor",
-                 fontsize=17, fontweight="bold", y=1.02)
+        ax.scatter([X[p, 0]], [X[p, 1]], s=360, marker="*", c=st.INK,
+                   edgecolors="white", linewidths=1.3, zorder=5)
+        if not ok:
+            ax.add_patch(plt.Circle((X[p, 0], X[p, 1]), R, fill=False, ls=(0, (5, 4)),
+                                    ec=st.RED, lw=2.0, zorder=4))
+        ax.set_title(title, fontsize=15, color=st.INK, fontweight="bold", pad=8)
+        ax.text(0.5, -0.02, f"{note}  —  {wrong} neighbours on the other arm",
+                transform=ax.transAxes, ha="center", va="top", fontsize=12.5,
+                color=st.GREEN if ok else st.RED, fontweight="bold")
+        ax.set_aspect("equal"); ax.set_xticks([]); ax.set_yticks([]); ax.spines[:].set_visible(False)
     st.save(fig, "fig1_why_euclid_fails.png")
 
 

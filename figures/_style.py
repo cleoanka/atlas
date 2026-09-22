@@ -1,7 +1,8 @@
-"""Shared plotting style: white background, large fonts, colorblind-safe (Okabe-Ito) palette.
+"""Shared design system for every figure: one font, one palette, one layout grammar.
 
-Every figure imports `setup()` and the OK palette so the repo has one consistent look that
-reads at social-media thumbnail size and survives colorblind vision.
+Goal: figures that look *designed*, not default-matplotlib — editorial title blocks (a coloured
+kicker bar + bold title + muted subtitle), a calm off-white canvas, a restrained colourblind-aware
+palette, and generous spacing. Import `setup()`, the palette, `header()` and `save()`.
 """
 from __future__ import annotations
 
@@ -9,36 +10,78 @@ import os
 
 import matplotlib
 
-matplotlib.use("Agg")  # headless
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
-
-# Okabe-Ito colorblind-safe palette
-OK = {
-    "black": "#000000", "orange": "#E69F00", "sky": "#56B4E9", "green": "#009E73",
-    "yellow": "#F0E442", "blue": "#0072B2", "vermillion": "#D55E00", "purple": "#CC79A7",
-    "grey": "#999999",
-}
-# 10-class categorical (digits 0-9), colorblind-tuned
-DIGITS = ["#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442",
-          "#0072B2", "#D55E00", "#CC79A7", "#999999", "#8B4513"]
+from matplotlib import font_manager as _fm  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+# --- font: prefer a designed geometric sans if the system has it ------------------------------
+_AVAIL = {f.name for f in _fm.fontManager.ttflist}
+FONT = next((f for f in ("Avenir Next", "Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans")
+             if f in _AVAIL), "DejaVu Sans")
+
+# --- palette -----------------------------------------------------------------------------------
+INK = "#1d1d29"        # primary text
+SUBINK = "#5b6270"     # secondary text
+MUTED = "#9aa1ad"      # captions, grid, inactive
+HAIR = "#e7e9f0"       # hairline grid
+CANVAS = "#ffffff"     # axes background
+PAPER = "#f6f7fb"      # figure background (soft)
+
+BLUE = "#2f6db3"       # class 0 / cool accent
+ORANGE = "#e8622c"     # class 1 / warm accent
+GREEN = "#2a9d68"      # "good" / wins
+RED = "#d1495b"        # "bad" / errors / hurts
+GOLD = "#e0a72e"
+
+OK = {"blue": BLUE, "orange": ORANGE, "green": GREEN, "red": RED, "vermillion": ORANGE,
+      "sky": BLUE, "grey": MUTED, "gold": GOLD, "ink": INK, "black": INK, "yellow": GOLD}
+
+# distinct, clean 10-class palette (refined tab10)
+DIGITS = ["#3b6fb0", "#e8843c", "#4f9d5d", "#cf4b52", "#8a6bbf",
+          "#8c6d5b", "#d98cc0", "#7d7f88", "#b7b03a", "#3fb0c4"]
 
 
 def setup():
     plt.rcParams.update({
-        "figure.facecolor": "white", "axes.facecolor": "white",
-        "savefig.facecolor": "white", "savefig.dpi": 150,
-        "font.size": 15, "axes.titlesize": 19, "axes.titleweight": "bold",
-        "axes.labelsize": 16, "xtick.labelsize": 13, "ytick.labelsize": 13,
-        "legend.fontsize": 13, "axes.spines.top": False, "axes.spines.right": False,
-        "axes.linewidth": 1.3, "lines.linewidth": 2.6, "font.family": "DejaVu Sans",
+        "font.family": [FONT, "DejaVu Sans"],   # per-glyph fallback (arrows etc. → DejaVu)
+        "figure.facecolor": PAPER, "axes.facecolor": CANVAS, "savefig.facecolor": PAPER,
+        "savefig.dpi": 200, "figure.dpi": 120,
+        "text.color": INK, "axes.labelcolor": SUBINK, "axes.edgecolor": "#cfd3dc",
+        "xtick.color": SUBINK, "ytick.color": SUBINK,
+        "font.size": 14, "axes.titlesize": 16, "axes.labelsize": 14,
+        "xtick.labelsize": 12, "ytick.labelsize": 12, "legend.fontsize": 12,
+        "axes.spines.top": False, "axes.spines.right": False,
+        "axes.linewidth": 1.1, "lines.linewidth": 2.8, "lines.solid_capstyle": "round",
+        "grid.color": HAIR, "grid.linewidth": 1.1, "axes.grid": False,
+        "figure.constrained_layout.use": False,
     })
 
 
+def header(fig, title, subtitle=None, kicker="FEW-LABEL-MANIFOLD", x=0.055, y=0.99,
+           accent=BLUE):
+    """Editorial title block: a coloured kicker bar + kicker text, bold title, muted subtitle."""
+    fig.text(x, y - 0.028, kicker, fontsize=10.5, va="top", ha="left",
+             color=accent, fontweight="bold")
+    fig.text(x, y - 0.072, title, fontsize=21, va="top", ha="left", color=INK,
+             fontweight="bold")
+    if subtitle:
+        fig.text(x, y - 0.132, subtitle, fontsize=13.5, va="top", ha="left", color=SUBINK)
+
+
+def footer(fig, text, x=0.055, y=0.015):
+    fig.text(x, y, text, fontsize=10.5, va="bottom", ha="left", color=MUTED)
+
+
+def grid(ax, axis="both"):
+    ax.grid(True, axis=axis, alpha=1.0)
+    ax.set_axisbelow(True)
+
+
 def save(fig, name):
-    setup_dir = HERE
-    path = os.path.join(setup_dir, name)
-    fig.savefig(path, bbox_inches="tight")
+    path = os.path.join(HERE, name)
+    fig.savefig(path, bbox_inches="tight", pad_inches=0.22)
+    plt.close(fig)
     print(f"  wrote figures/{name}")
     return path

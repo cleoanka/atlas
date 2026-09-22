@@ -1,13 +1,12 @@
+<p align="center"><img src="figures/banner.png" width="100%"></p>
+
 # few-label-manifold
 
 **Yeterince iyi bir temsille, sınıf başına bir etiket 7000 etiketin getirdiğinin ~%95'ini verir — ve kötü bir temsille aynı numara hiçbir şey yapmamaktan *daha kötü* olur.**
 
 *(English: [README.md](README.md))*
 
-<p align="center">
-  <img src="figures/fig7_headline.png" width="560"><br>
-  <img src="figures/fig2_diffusion.gif" width="460">
-</p>
+<p align="center"><img src="figures/fig2_diffusion.gif" width="480"></p>
 
 Sınıflandırmanın zor kısmı sınıflandırıcı değildir. **Metriktir** — hangi noktaların birbirine "yakın" sayılacağına nasıl karar verdiğindir. Metriği düzeltirsen etiketler neredeyse bedava olur: artık makineye bir rakamın ne olduğunu *öğretmiyorsun*, onun zaten bulduğu kümelere sadece *isim veriyorsun*.
 
@@ -24,6 +23,50 @@ Sınıflandırmanın zor kısmı sınıflandırıcı değildir. **Metriktir** �
 <p align="center"><img src="figures/fig2_diffusion_final.png" width="460"></p>
 
 **Etiket neden yalnızca *isim verir*.** Temsil veriyi zaten gruplamışsa, bir etiket sınıfı oyup çıkarmaz — geometrinin kendiliğinden bulduğu bir gruba yalnızca insan-okunur bir ad ekler. Yani ihtiyacın olan etiket sayısı, sınıf sayısıyla değil, verideki **mod** (ayrı yığın) sayısıyla ölçeklenir.
+
+---
+
+## Nasıl çalışır — matematiği
+
+**Graf.** $n$ noktanın her birini bir $\phi$ temsiliyle göm, her noktayı $k$ en yakın komşusuna bağla ve her kenarı Gauss çekirdeğiyle ağırlıklandır
+
+$$W_{ij} = \exp\!\left(-\frac{\lVert \phi_i-\phi_j\rVert^2}{2\sigma^2}\right),\qquad \sigma=\text{medyan kenar uzaklığı},$$
+
+$W=W^{\top}$ olacak şekilde simetrikleştir. Derece matrisi $D=\operatorname{diag}(\sum_j W_{ij})$ ile simetrik normalize operatörü kur:
+
+$$S = D^{-1/2}\,W\,D^{-1/2}.$$
+
+**Etiket yayılımı (label spreading).** Çok az etiketi bir one-hot tohum matrisine koy: $Y\in\{0,1\}^{n\times C}$, yalnız etiketli tohumlarda sıfırdan farklı. Şunu iterasyonla çalıştır
+
+$$F^{(t+1)} = \alpha\,S\,F^{(t)} + (1-\alpha)\,Y,\qquad \alpha\in(0,1),$$
+
+ve $\hat y_i=\arg\max_c F_{ic}$ ile tahmin et. $\lVert \alpha S\rVert_2=\alpha<1$ olduğundan bu bir büzülme (contraction) ve kapalı forma yakınsar:
+
+$$F^{\star} = (1-\alpha)\,(I-\alpha S)^{-1}\,Y = (1-\alpha)\sum_{t=0}^{\infty}(\alpha S)^{t}\,Y.$$
+
+**Neden difüzyon.** Asıl fikir bu seride: $(\alpha S)^{t}$, graf üzerinde $t$-uzunluklu yürüyüş operatörüdür, $\alpha^{t}$ ile iskontolanmış. Yani bir noktanın etiketi, ona **her uzunluktaki graf yürüyüşleriyle ulaşan etiket kütlesinin iskontolu toplamıdır** (kısa yürüyüşler en ağır) — etiket *kenarlar boyunca* akar; "yakın" demek düz-çizgi değil, *veri boyunca ulaşılabilir* demektir. Eşdeğer olarak $F^{\star}$ şunu minimize eder:
+
+$$\tfrac12\sum_{i,j} W_{ij}\left\lVert \tfrac{F_i}{\sqrt{D_{ii}}}-\tfrac{F_j}{\sqrt{D_{jj}}}\right\rVert^2 \;+\; \tfrac{1-\alpha}{\alpha}\sum_i \lVert F_i-Y_i\rVert^2,$$
+
+yani *etiketler güçlü kenarlar boyunca yavaş değişir*, tohumlara yakın kalırken.
+
+**Neden her şey kenar saflığında.** $S=S_{\text{iç}}+S_{\text{çapraz}}$ diye ayır (sınıf-içi ve sınıflar-arası kenarlar). Yürüyüş serisi bir tohumun etiketini $S_{\text{iç}}$ üzerinden doğru taşır; $S_{\text{çapraz}}$ içeren her terim, *yanlış* etiketi sınırın karşısına sızdıran bir kanaldır. **Kenar saflığı**:
+
+$$\pi=\frac{\text{sınıf-içi kenar ağırlığı}}{\text{toplam kenar ağırlığı}}.$$
+
+$\pi\to1$ iken $S$ neredeyse sınıflara göre blok-köşegen olur, difüzyon sınıf-içinde kalır. $\pi$ düşerken çapraz iletkenlik büyür ve bir eşiği geçince bir düğüme ulaşan yanlış-etiket kütlesi doğru-etiketi aşar, $\arg\max$ **döner**. İşte bu yüzden doğruluk eğrisi yumuşak bir iniş değil, bir *faz geçişidir* (fig4) ve tek bir ağır köprü kenarı bir bölgeyi çevirebilir (fig3).
+
+**Naif temel.** Öklid 1-NN, $\hat y_i = y_{\,i\text{'ye en yakın tohum}}$ der (ortam metriğinde): *tek* bir noktaya bakar ve ham mesafeye güvenir, o yüzden manifoldun katlandığı her yerde kırılır (fig1). Difüzyon ise tüm graf üzerinden toplar — $\pi$ yüksekken güç, düşükken zayıflık. Kesişim bu yüzden.
+
+**$\pi$'yi yükselten temsil.** Contrastive kodlayıcı **etiketsiz** eğitilir: aynı görüntünün iki artırımını yakınlaştırır, geri kalan her şeyi iter (NT-Xent, sıcaklık $\tau$):
+
+$$\mathcal{L}_i = -\log\frac{\exp(\langle z_i,z_i^{+}\rangle/\tau)}{\sum_{j\ne i}\exp(\langle z_i,z_j\rangle/\tau)}.$$
+
+Bu, metriği aynı-sınıf görüntüler komşu olacak şekilde büker; kenar saflığı fırlar (ham piksel $\%88\to$ contrastive $\%97$) — faz geçişinin tam da ödüllendirdiği şey.
+
+**Neden etiketler modlarla ölçeklenir, sınıflarla değil.** Difüzyon her saf bağlı bileşeni, içine düşen tohumun etiketiyle boyar; **tohumsuz** bir bileşen belirsizdir. Veri $M$ iyi-ayrık moddan oluşuyorsa, her şeyi boyamak için mod başına $\gtrsim 1$ tohum gerekir. Sınıf, modların *birleşimi* olduğundan etiket bütçesi sınıf sayısı $C$ ile değil, $M\ge C$ ile ölçeklenir (fig5).
+
+> **Difüzyon haritaları** (tablo satırlarından biri) *aynı* operatörü farklı kullanır: $S$'in en büyük özvektörlerini al, özdeğerleriyle ölçekle ve bunları koordinat yap. Oradaki Öklid mesafesi grafın *difüzyon mesafesine* eşittir — bir sınıflandırıcı değil, bir temsil.
 
 ---
 

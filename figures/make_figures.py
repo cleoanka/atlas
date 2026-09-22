@@ -10,6 +10,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 MODULES = [
+    "make_banner",
     "make_fig1_why_euclid_fails",
     "make_fig3_bridge_edge",
     "make_fig4_phase_transition",

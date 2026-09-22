@@ -18,9 +18,11 @@ from sklearn.neighbors import kneighbors_graph
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _style as st  # noqa: E402
 
-C0 = np.array([0.0, 0.45, 0.70])      # blue  (class 0)
-C1 = np.array([0.90, 0.62, 0.0])      # orange(class 1)
-CG = np.array([0.85, 0.85, 0.85])     # grey  (wavefront not arrived yet)
+import matplotlib.colors as _mc
+
+C0 = np.array(_mc.to_rgb(st.BLUE))    # class 0
+C1 = np.array(_mc.to_rgb(st.ORANGE))  # class 1
+CG = np.array([0.86, 0.87, 0.90])     # grey  (wavefront not arrived yet)
 
 
 def colors(reached, p1):

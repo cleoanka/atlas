@@ -30,36 +30,39 @@ def main():
     pred = F.argmax(1)
     acc = (pred == y).mean()
 
-    # 2D layout for display (subsample for a clean, fast t-SNE)
     sub = rng.choice(len(y), 3000, replace=False)
-    sub = np.unique(np.concatenate([sub, seeds]))            # keep the seeds in view
+    sub = np.unique(np.concatenate([sub, seeds]))
     Z = TSNE(n_components=2, init="pca", perplexity=30, random_state=0).fit_transform(X[sub])
     ys, ps = y[sub], pred[sub]
-    seed_pos = {int(s): i for i, s in enumerate(sub) if s in set(seeds)}
+    star_idx = [i for i, s in enumerate(sub) if s in set(seeds)]
 
-    fig, axes = plt.subplots(1, 2, figsize=(13.5, 6.6))
-    # left: true labels
+    fig = plt.figure(figsize=(13.2, 7.0))
+    st.header(fig, "Ten labels paint the whole manifold",
+              "contrastive embedding (t-SNE view) · left: truth · right: diffused from 10 seeds",
+              accent=st.GREEN)
+    axL = fig.add_axes([0.02, 0.03, 0.46, 0.72]); axR = fig.add_axes([0.52, 0.03, 0.46, 0.72])
+
     for c in range(C):
         m = ys == c
-        axes[0].scatter(Z[m, 0], Z[m, 1], s=10, c=st.DIGITS[c], alpha=0.8, label=str(c))
-    axes[0].set_title("True labels")
-    axes[0].legend(loc="upper right", markerscale=2, ncol=2, fontsize=10, frameon=False,
-                   title="digit")
-    # right: predicted from 10 labels; errors red; seeds as stars
+        axL.scatter(Z[m, 0], Z[m, 1], s=14, c=st.DIGITS[c], alpha=0.85, label=str(c),
+                    edgecolors="none")
+    axL.set_title("True labels", fontsize=15, fontweight="bold", color=st.INK, pad=8)
+    axL.legend(loc="center left", bbox_to_anchor=(0.98, 0.5), markerscale=2.2, ncol=1,
+               fontsize=11, frameon=False, title="digit", handletextpad=0.2, columnspacing=0.8)
+
     err = ps != ys
     for c in range(C):
         m = (ps == c) & ~err
-        axes[1].scatter(Z[m, 0], Z[m, 1], s=10, c=st.DIGITS[c], alpha=0.8)
-    axes[1].scatter(Z[err, 0], Z[err, 1], s=16, c=st.OK["vermillion"], alpha=0.95,
-                    label=f"errors ({err.mean()*100:.1f}%)", zorder=3)
-    star_idx = [i for s, i in seed_pos.items()]
-    axes[1].scatter(Z[star_idx, 0], Z[star_idx, 1], s=340, marker="*", c="black",
-                    edgecolors="white", linewidths=1.2, zorder=5, label="the 10 labels")
-    axes[1].set_title(f"Predicted from 10 labels — {acc*100:.1f}% correct")
-    axes[1].legend(loc="upper right", markerscale=1, fontsize=11, frameon=False)
-    for ax in axes:
+        axR.scatter(Z[m, 0], Z[m, 1], s=14, c=st.DIGITS[c], alpha=0.85, edgecolors="none")
+    axR.scatter(Z[err, 0], Z[err, 1], s=22, c=st.RED, alpha=0.95, zorder=3,
+                label=f"errors ({err.mean()*100:.1f}%)")
+    axR.scatter(Z[star_idx, 0], Z[star_idx, 1], s=380, marker="*", c=st.INK,
+                edgecolors="white", linewidths=1.3, zorder=5, label="the 10 labels")
+    axR.set_title(f"Predicted from 10 labels — {acc*100:.1f}% correct", fontsize=15,
+                  fontweight="bold", color=st.INK, pad=8)
+    axR.legend(loc="lower right", fontsize=11.5, frameon=False)
+    for ax in (axL, axR):
         ax.set_xticks([]); ax.set_yticks([]); ax.spines[:].set_visible(False)
-    fig.suptitle("Ten labels paint the whole manifold", fontsize=18, fontweight="bold", y=1.0)
     st.save(fig, "fig6_embedding.png")
 
 
