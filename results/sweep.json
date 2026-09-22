@@ -1,0 +1,97 @@
+{
+  "purity_sweep": [
+    {
+      "noise": 0.0,
+      "purity": 0.8989636940430031,
+      "euclid_1nn": 0.44358499999999995,
+      "diffusion": 0.754325
+    },
+    {
+      "noise": 0.4,
+      "purity": 0.8608516185096676,
+      "euclid_1nn": 0.42128000000000004,
+      "diffusion": 0.7009049999999999
+    },
+    {
+      "noise": 0.7,
+      "purity": 0.7586272957163657,
+      "euclid_1nn": 0.35869500000000004,
+      "diffusion": 0.5031350000000001
+    },
+    {
+      "noise": 0.9,
+      "purity": 0.6525866573767636,
+      "euclid_1nn": 0.32387000000000005,
+      "diffusion": 0.321095
+    },
+    {
+      "noise": 1.1,
+      "purity": 0.544820729208347,
+      "euclid_1nn": 0.26467,
+      "diffusion": 0.21466
+    },
+    {
+      "noise": 1.4,
+      "purity": 0.4134617660284477,
+      "euclid_1nn": 0.218455,
+      "diffusion": 0.135555
+    },
+    {
+      "noise": 1.9,
+      "purity": 0.26745320265688144,
+      "euclid_1nn": 0.17523,
+      "diffusion": 0.11991
+    },
+    {
+      "noise": 2.8,
+      "purity": 0.1703647642964441,
+      "euclid_1nn": 0.13569499999999998,
+      "diffusion": 0.10737000000000001
+    }
+  ],
+  "label_budget": {
+    "per_class_diffusion": 0.761968,
+    "points": [
+      {
+        "clusters": 10,
+        "one_per_cluster": 0.4748240000000001,
+        "majority": 0.6014
+      },
+      {
+        "clusters": 20,
+        "one_per_cluster": 0.597144,
+        "majority": 0.7187
+      },
+      {
+        "clusters": 30,
+        "one_per_cluster": 0.6770520000000001,
+        "majority": 0.7819
+      },
+      {
+        "clusters": 40,
+        "one_per_cluster": 0.706484,
+        "majority": 0.8048
+      },
+      {
+        "clusters": 60,
+        "one_per_cluster": 0.7458119999999999,
+        "majority": 0.8201
+      },
+      {
+        "clusters": 80,
+        "one_per_cluster": 0.7826719999999999,
+        "majority": 0.8558
+      },
+      {
+        "clusters": 120,
+        "one_per_cluster": 0.812568,
+        "majority": 0.8759
+      },
+      {
+        "clusters": 160,
+        "one_per_cluster": 0.820124,
+        "majority": 0.8891
+      }
+    ]
+  }
+}

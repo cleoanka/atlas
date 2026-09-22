@@ -1,0 +1,59 @@
+{
+  "config": {
+    "dataset": "MNIST",
+    "n_eval": 10000,
+    "labels": "1 per class",
+    "trials": 60,
+    "k": 10,
+    "alpha": 0.99,
+    "iters": 60
+  },
+  "rows": [
+    {
+      "purity": 0.884311827810417,
+      "bridges": 8487,
+      "components": 1,
+      "euclid_1nn": 0.4230399999999999,
+      "euclid_1nn_std": 0.04302562879648981,
+      "diffusion": 0.7135349999999999,
+      "diffusion_std": 0.05809903563456683,
+      "name": "raw",
+      "label": "raw pixels"
+    },
+    {
+      "purity": 0.8989636940430031,
+      "bridges": 7166,
+      "components": 1,
+      "euclid_1nn": 0.43600000000000005,
+      "euclid_1nn_std": 0.04586179601076841,
+      "diffusion": 0.74573,
+      "diffusion_std": 0.057991388153759524,
+      "name": "pca50",
+      "label": "PCA-50"
+    },
+    {
+      "purity": 0.9133964607264825,
+      "bridges": 5579,
+      "components": 1,
+      "euclid_1nn": 0.37603000000000003,
+      "euclid_1nn_std": 0.046601599757948226,
+      "diffusion": 0.7284366666666666,
+      "diffusion_std": 0.062151149001625244,
+      "name": "diffusion_map",
+      "label": "diffusion map"
+    },
+    {
+      "purity": 0.9662218105783129,
+      "bridges": 2407,
+      "components": 1,
+      "euclid_1nn": 0.628895,
+      "euclid_1nn_std": 0.06317926195886325,
+      "diffusion": 0.9468616666666667,
+      "diffusion_std": 0.03567505240204826,
+      "name": "contrastive",
+      "label": "contrastive (40ep)"
+    }
+  ],
+  "full_label_linear_upper_bound": 0.9856666666666667,
+  "n_labels_full": 7000
+}
