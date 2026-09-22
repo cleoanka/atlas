@@ -17,6 +17,7 @@ MODULES = [
     "make_fig5_label_budget",
     "make_fig6_embedding",
     "make_fig7_headline",
+    "make_fig8_representation",
     "make_fig2_diffusion",   # cover GIF last (slowest)
 ]
 
