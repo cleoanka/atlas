@@ -51,14 +51,15 @@ def main():
     ax.set_facecolor(st.PAPER)
 
     # ---- left: the words ----
-    fig.text(0.055, 0.90, "few-label-manifold", fontsize=40, fontweight="bold",
-             color=st.INK, va="top")
-    fig.text(0.058, 0.66, "one label per class — when the metric is good enough",
+    fig.text(0.056, 0.955, "FEW-LABEL LEARNING", fontsize=11.5, fontweight="bold",
+             color=st.BLUE, va="top")
+    fig.text(0.055, 0.90, "atlas", fontsize=52, fontweight="bold", color=st.INK, va="top")
+    fig.text(0.058, 0.585, "chart the whole manifold from a few names",
              fontsize=17.5, color=st.BLUE, va="top", fontweight="bold")
-    fig.text(0.058, 0.50,
+    fig.text(0.058, 0.45,
              "The hard part of classification is the metric, not the classifier.\n"
-             "Fix the representation and a single label per class propagates\n"
-             "across the whole dataset along a similarity graph.",
+             "Fix the representation and one label per class propagates across\n"
+             "the whole dataset along a similarity graph.",
              fontsize=13, color=st.SUBINK, va="top", linespacing=1.5)
     # headline chips
     fig.text(0.058, 0.135, "  10 labels → 94.7%  ", fontsize=15, fontweight="bold",

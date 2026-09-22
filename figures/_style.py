@@ -59,7 +59,7 @@ def setup():
     })
 
 
-def header(fig, title, subtitle=None, kicker="FEW-LABEL-MANIFOLD", x=0.055, y=0.99,
+def header(fig, title, subtitle=None, kicker="ATLAS · FEW-LABEL LEARNING", x=0.055, y=0.99,
            accent=BLUE):
     """Editorial title block: a coloured kicker bar + kicker text, bold title, muted subtitle."""
     fig.text(x, y - 0.028, kicker, fontsize=10.5, va="top", ha="left",

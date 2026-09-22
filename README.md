@@ -1,6 +1,8 @@
 <p align="center"><img src="figures/banner.png" width="100%"></p>
 
-# few-label-manifold
+# atlas
+
+> **few-label learning on a manifold** — one label per class, when the metric is good enough.
 
 **With a good enough representation, one label per class recovers ~95% of what 7000 labels buy — and with a bad representation the same trick does *worse* than nothing.**
 

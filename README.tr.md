@@ -1,6 +1,8 @@
 <p align="center"><img src="figures/banner.png" width="100%"></p>
 
-# few-label-manifold
+# atlas
+
+> **manifold üzerinde az-etiketli öğrenme** — sınıf başına bir etiket, metrik yeterince iyiyse.
 
 **Yeterince iyi bir temsille, sınıf başına bir etiket 7000 etiketin getirdiğinin ~%95'ini verir — ve kötü bir temsille aynı numara hiçbir şey yapmamaktan *daha kötü* olur.**
 

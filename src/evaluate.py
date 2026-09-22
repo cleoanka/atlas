@@ -55,5 +55,5 @@ def run(trials: int = 60, k: int = M.K_DEFAULT):
 
 if __name__ == "__main__":
     tr = int(sys.argv[1]) if len(sys.argv) > 1 else 60
-    print(f"=== few-label-manifold: headline table ({tr} trials) ===")
+    print(f"=== atlas: headline table ({tr} trials) ===")
     run(trials=tr)
