@@ -72,6 +72,7 @@ Metriği boz, kenar saflığı düşer. Graf difüzyonu saflığı **dik** takip
   <img src="figures/fig4_phase_transition.png" width="49%">
   <img src="figures/fig3_bridge_edge.png" width="49%">
 </p>
+<p align="center"><em>Solda: ~%65 saflığın altında difüzyon (turuncu) naif 1-NN'in (gri) altına iner — uçurum, yokuş değil. Sağda: tek köprü kenarı bir sınırı sular, %100 → %82.</em></p>
 
 Sonucun işe yarar kısmı bu: *ne zaman uğraşmayacağını* söyler. Temsilin düşük-saflıklı bir graf veriyorsa, etiket yayılımı sana etiket kazandırmaz, doğruluk kaybettirir.
 
@@ -104,9 +105,17 @@ python src/sweep.py             # saflık + bütçe      -> results/sweep.json
 python figures/make_figures.py  # tüm figürler (kapak GIF'i dahil)
 ```
 
-Contrastive gömme ve değerlendirme bölmesi repoda gelir; her sayı **GPU olmadan** yeniden üretilir (MNIST ilk kullanımda kendini indirir). Kodlayıcıyı yeniden eğit: `pip install torch && python src/train_contrastive.py 40` (MPS / CUDA / CPU otomatik). 5 hücrelik tur: [`notebooks/demo.ipynb`](notebooks/demo.ipynb).
+Contrastive gömme ve değerlendirme bölmesi repoda gelir; her sayı **GPU olmadan** yeniden üretilir (MNIST ilk kullanımda kendini indirir). Kodlayıcıyı yeniden eğit: `pip install torch && python src/train_contrastive.py 40` (MPS / CUDA / CPU otomatik). Tam Mac/NVIDIA kurulumu: [`docs/TRAINING.md`](docs/TRAINING.md). 5 hücrelik tur: [`notebooks/demo.ipynb`](notebooks/demo.ipynb).
 
-**Sayılar** (MNIST, 10k, sınıf başına 1 etiket, 60 seçim, k=10) — doğruluk kaynağı `results/*.json`:
+---
+
+## MNIST sonuçları
+
+Contrastive metrikte graf difüzyonu 10 etiketle **%94.7** — hepsi 7000 etiketle eğitilmiş tam-denetimli modelin sadece 3.9 puan altında, **700× daha az etiketle**.
+
+<p align="center"><img src="figures/fig7_headline.png" width="60%"></p>
+
+**Sayılar** (MNIST, 10k, sınıf başına 1 etiket, 60 rastgele seçim, k=10) — doğruluk kaynağı `results/*.json`:
 
 | temsil | kenar saflığı | Öklid 1-NN | graf difüzyonu |
 |---|--:|--:|--:|
@@ -115,11 +124,13 @@ Contrastive gömme ve değerlendirme bölmesi repoda gelir; her sayı **GPU olma
 | difüzyon haritası | %91.3 | %37.6 | %72.8 |
 | **contrastive** | **%96.6** | **%62.9** | **%94.7** |
 
+Son iki sütuna bak: graf difüzyonu naif 1-NN'i *yalnızca* yüksek-saflıklı contrastive grafta ezer (94.7'ye 62.9) — ve fark yaratan satır, contrastive, bir etiket numarası değil temsildir.
+
 ---
 
 ## Gerçek fotoğraflarda tutuyor mu? — ImageNette
 
-MNIST kolaydır. O yüzden dürüst test gerçek ImageNet fotoğrafları: [ImageNette](https://github.com/fastai/imagenette) (10 sınıf — tench, church, parachute, …), sıfırdan **etiketsiz** eğitilmiş bir ResNet-18 contrastive kodlayıcı (128px, 100 epoch), sonra 3925 görüntülük doğrulama havuzunda aynı sınıf-başına-1-etiket değerlendirmesi.
+MNIST kolaydır. O yüzden dürüst test gerçek ImageNet fotoğrafları: [ImageNette](https://github.com/fastai/imagenette) (10 sınıf — tench, church, parachute, …), sıfırdan **etiketsiz** eğitilmiş bir ResNet-18 contrastive kodlayıcı (160px, 300 epoch), sonra 3925 görüntülük doğrulama havuzunda aynı sınıf-başına-1-etiket değerlendirmesi.
 
 **Tez daha da güçleniyor.** Gerçek görüntülerde piksel metriği neredeyse işe yaramaz — ham-piksel difüzyonu şans seviyesinde (%13). Öğrenilmiş metrik aynı 10 etiketle **%62'ye** sıçrar. Temsil farkı MNIST'teki +23 puandan burada **+49** puana çıkar.
 

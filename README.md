@@ -17,6 +17,8 @@ The whole 23-point spread is the **metric** — how you decide which points are 
 
 You have thousands of images and can label only a handful. Instead of *training a classifier*, you (1) turn each image into a feature vector with an **unsupervised** encoder, (2) connect each image to its nearest neighbours in that feature space to form a graph, and (3) drop **one labelled seed per class** and let each label **spread along the graph edges** until every node is coloured. It works astonishingly well — *if* neighbours in feature space really are the same class. That one condition, **edge purity**, decides everything, and it is set entirely by the encoder. So the real question is never "how do we use the labels" — it is "how good is the metric."
 
+**Contents:** [Three claims](#three-claims-each-measured) · [Why it works](#why-it-works) · [Use it](#use-it) · [The math](#the-mechanism--the-math) · [Phase transition](#the-catch-that-makes-it-real-a-phase-transition) · [Label budget](#how-many-labels-does-a-dataset-actually-need) · [The map](#ten-labels-drawn-on-the-map) · [MNIST results](#results-on-mnist) · [ImageNette](#does-it-hold-on-real-photographs--imagenette) · [Squeezing more](#squeezing-more--a-better-ruler-or-a-better-chosen-label) · [What this is](#what-this-is)
+
 ---
 
 ## Three claims, each measured
@@ -93,6 +95,7 @@ Degrade the metric and edge purity falls. Graph diffusion tracks it **steeply**;
   <img src="figures/fig4_phase_transition.png" width="49%">
   <img src="figures/fig3_bridge_edge.png" width="49%">
 </p>
+<p align="center"><em>Left: below ~65% purity, diffusion (orange) drops under naive 1-NN (grey) — a cliff, not a slope. Right: a single bridge edge floods a class boundary, 100% → 82%.</em></p>
 
 This is the useful part of the result: it tells you *when not to bother*. If your representation gives a low-purity graph, label propagation will cost you accuracy, not save you labels.
 
@@ -116,18 +119,13 @@ The contrastive embedding, coloured by truth (left) and by the label diffused fr
 
 ---
 
-## Reproduce
+## Results on MNIST
 
-```bash
-pip install -r requirements.txt
-python src/evaluate.py          # the table          -> results/results.json
-python src/sweep.py             # purity + budget    -> results/sweep.json
-python figures/make_figures.py  # every figure incl. the cover GIF
-```
+Ten labels via graph diffusion on the contrastive metric reach **94.7%** — within 3.9 points of a fully-supervised model trained on all 7000, from **700× fewer labels**.
 
-The contrastive embedding and eval split ship in the repo, so every number reproduces **without a GPU** (MNIST downloads itself on first use). Retrain the encoder with `pip install torch && python src/train_contrastive.py 40` (MPS / CUDA / CPU auto). A 5-cell tour is in [`notebooks/demo.ipynb`](notebooks/demo.ipynb).
+<p align="center"><img src="figures/fig7_headline.png" width="60%"></p>
 
-**Numbers** (MNIST, 10k eval, 1 label/class, 60 draws, k=10) — `results/*.json` is the source of truth:
+**Numbers** (MNIST, 10k eval, 1 label/class, 60 random draws, k=10) — `results/*.json` is the source of truth:
 
 | representation | edge purity | Euclid 1-NN | graph diffusion |
 |---|--:|--:|--:|
@@ -136,11 +134,13 @@ The contrastive embedding and eval split ship in the repo, so every number repro
 | diffusion map | 91.3% | 37.6% | 72.8% |
 | **contrastive** | **96.6%** | **62.9%** | **94.7%** |
 
+Read across the last two columns: graph diffusion crushes naive 1-NN (94.7 vs 62.9) *only* on the high-purity contrastive graph — and the row that matters, contrastive, is the representation, not a label trick.
+
 ---
 
 ## Does it hold on real photographs? — ImageNette
 
-MNIST is easy. So the honest test is real ImageNet photos: [ImageNette](https://github.com/fastai/imagenette) (10 classes — tench, church, parachute, …), a ResNet-18 contrastive encoder trained from scratch **with no labels** (128px, 100 epochs), then the identical 1-label-per-class evaluation on the 3925-image validation pool.
+MNIST is easy. So the honest test is real ImageNet photos: [ImageNette](https://github.com/fastai/imagenette) (10 classes — tench, church, parachute, …), a ResNet-18 contrastive encoder trained from scratch **with no labels** (160px, 300 epochs), then the identical 1-label-per-class evaluation on the 3925-image validation pool.
 
 **The thesis gets *stronger*.** On real images a pixel metric is near useless — raw-pixel diffusion lands at chance (13%). The learned metric jumps to **62%** from the same 10 labels. The representation gap widens from +23 points on MNIST to **+49** here.
 
