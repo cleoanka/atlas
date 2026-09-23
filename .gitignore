@@ -9,3 +9,10 @@ __pycache__/
 *.pyc
 .DS_Store
 .ipynb_checkpoints/
+
+# ImageNette raw data + caches (heavy, regenerable) — but keep the shipped embedding
+data/imagenette2-160/
+data/imagenette2-160.tgz
+data/imagenette_train_*.npz
+data/imagenette_eval_*.npz
+!data/imagenette_emb.npz

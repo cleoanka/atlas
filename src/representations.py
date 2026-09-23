@@ -1,12 +1,12 @@
-"""Representations of MNIST: raw pixels, PCA-50, diffusion map, contrastive embedding.
+"""Representations for MNIST and ImageNette: raw pixels, PCA-50, diffusion map, contrastive.
 
 The single idea of this repo lives here: the *metric* (how you measure distance between
-points) is where the hard work is. Each function below produces a different metric space
-for the SAME 10k evaluation digits; `metrics.py` then scores each one with the same
-downstream protocol (edge purity, 1-label-per-class Euclid-1NN vs. graph diffusion).
+points) is where the hard work is. Each function produces a different metric space for the
+SAME evaluation pool; `metrics.py` scores each one with the same protocol (edge purity,
+1-label-per-class Euclid-1NN vs. graph diffusion).
 
 All representations are UNSUPERVISED (no labels used to build them) — labels only enter at
-evaluation time, one per class.
+evaluation time, one per class. Pick the dataset with the `dataset=` argument.
 """
 from __future__ import annotations
 
@@ -22,50 +22,60 @@ _HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MNIST = os.path.join(_HERE, "mnist.npz")
 EVAL_SPLIT = os.path.join(_HERE, "eval_split.npz")
 CONTRASTIVE = os.path.join(_HERE, "contrastive_emb.npz")
+IMAGENETTE_EMB = os.path.join(_HERE, "data", "imagenette_emb.npz")
+
+DATASETS = ("mnist", "imagenette")
 
 
-def load_eval_pixels():
-    """Return (X_pixels[10k,784] in [0,1], y[10k]) — the fixed evaluation split.
-
-    Uses eval_split.npz (indices + labels) produced by train_contrastive.py, so every
-    representation is scored on EXACTLY the same 10k digits as the contrastive embedding.
-    """
+def _mnist_pixels():
     if not os.path.exists(EVAL_SPLIT):
-        raise FileNotFoundError(
-            "eval_split.npz missing — it is shipped in the repo; run "
-            "`python src/train_contrastive.py` to regenerate it.")
+        raise FileNotFoundError("eval_split.npz missing — run `python src/train_contrastive.py`.")
     if not os.path.exists(MNIST):                     # gitignored (21 MB) → fetch once on demand
         from sklearn.datasets import fetch_openml
         print("downloading MNIST (once)...", flush=True)
         d = fetch_openml("mnist_784", version=1, as_frame=False, parser="liac-arff")
         np.savez_compressed(MNIST, X=d.data.astype("float32") / 255.0, y=d.target.astype(int))
     d = np.load(MNIST)
-    X = d["X"]
     sp = np.load(EVAL_SPLIT)
-    idx = sp["idx"]
-    return np.ascontiguousarray(X[idx], "float32"), sp["y"].astype(int)
+    return np.ascontiguousarray(d["X"][sp["idx"]], "float32"), sp["y"].astype(int)
 
 
-def raw_pixels():
-    """Raw 784-dim pixel space (the naive metric: L2 distance between images)."""
-    X, y = load_eval_pixels()
-    return X, y
+def _imagenette_pixels(raw_size: int = 32):
+    """Validation pool as flattened low-res RGB (the naive 'raw pixel' metric for real images).
+
+    The cached eval images (128×128) are block-mean-pooled to raw_size×raw_size and flattened
+    to 3·raw_size² dims in [0,1] — a fair, cheap pixel baseline (full-res L2 is hopeless AND slow).
+    """
+    import imagenette_data as ID
+    X8, y = ID.eval_cache(128)                        # (N,128,128,3) uint8
+    f = 128 // raw_size
+    X = (X8.reshape(len(X8), raw_size, f, raw_size, f, 3).mean(axis=(2, 4)) / 255.0)
+    return X.reshape(len(X8), -1).astype("float32"), y.astype(int)
 
 
-def pca50(dim: int = 50):
+def load_eval_pixels(dataset: str = "mnist"):
+    """Return (X_pixels, y) for the fixed evaluation pool of the chosen dataset."""
+    if dataset == "mnist":
+        return _mnist_pixels()
+    if dataset == "imagenette":
+        return _imagenette_pixels()
+    raise KeyError(f"unknown dataset '{dataset}'; choices: {DATASETS}")
+
+
+def raw_pixels(dataset: str = "mnist"):
+    """Raw pixel space (the naive metric: L2 distance between images)."""
+    return load_eval_pixels(dataset)
+
+
+def pca50(dataset: str = "mnist", dim: int = 50):
     """Linear PCA to `dim` dimensions — a cheap, standard denoising of pixel space."""
-    X, y = load_eval_pixels()
+    X, y = load_eval_pixels(dataset)
     return PCA(n_components=dim, random_state=0).fit_transform(X).astype("float32"), y
 
 
-def diffusion_map(n_components: int = 50, k: int = 10, seed: int = 0):
-    """Coifman-Lafon diffusion map: nonlinear coordinates from the graph Laplacian.
-
-    Build a symmetric kNN affinity, form the normalized operator S = D^-1/2 W D^-1/2, take
-    its top eigenvectors (dropping the trivial constant one) scaled by their eigenvalues.
-    This bends the metric along the data manifold BEFORE any labels are seen.
-    """
-    X, y = load_eval_pixels()
+def diffusion_map(dataset: str = "mnist", n_components: int = 50, k: int = 10):
+    """Coifman-Lafon diffusion map: nonlinear coordinates from the graph Laplacian."""
+    X, y = load_eval_pixels(dataset)
     A = kneighbors_graph(X, k, mode="distance", include_self=False)
     A = A.maximum(A.T)
     sig = np.median(A.data)
@@ -75,25 +85,19 @@ def diffusion_map(n_components: int = 50, k: int = 10, seed: int = 0):
     dd = np.asarray(W.sum(1)).ravel()
     dd[dd == 0] = 1.0
     S = (diags(dd ** -0.5) @ W @ diags(dd ** -0.5)).tocsr()
-    # top n_components+1 eigenpairs (largest algebraic); drop the trivial leading one
     vals, vecs = eigsh(S, k=n_components + 1, which="LA")
     order = np.argsort(vals)[::-1]
     vals, vecs = vals[order][1:], vecs[:, order][:, 1:]
-    emb = (vecs * vals[None, :]).astype("float32")            # diffusion coordinates (t=1)
-    return emb, y
+    return (vecs * vals[None, :]).astype("float32"), y
 
 
-def contrastive():
-    """Load the pretrained contrastive embedding (contrastive_emb.npz, 64-dim, L2-normed).
-
-    Produced by src/train_contrastive.py (unsupervised NT-Xent). Shipped in the repo so the
-    headline result reproduces without a GPU.
-    """
-    if not os.path.exists(CONTRASTIVE):
+def contrastive(dataset: str = "mnist"):
+    """Load the unsupervised contrastive embedding (L2-normalised). Shipped in the repo."""
+    path = CONTRASTIVE if dataset == "mnist" else IMAGENETTE_EMB
+    if not os.path.exists(path):
         raise FileNotFoundError(
-            "contrastive_emb.npz missing — run `python src/train_contrastive.py 40` "
-            "(needs a GPU/MPS; the file is shipped in the repo so you usually don't).")
-    d = np.load(CONTRASTIVE)
+            f"{os.path.basename(path)} missing — run the matching train_contrastive script.")
+    d = np.load(path)
     return np.ascontiguousarray(d["emb"], "float32"), d["y"].astype(int)
 
 
@@ -102,12 +106,12 @@ REGISTRY = {
     "raw": (raw_pixels, "raw pixels"),
     "pca50": (pca50, "PCA-50"),
     "diffusion_map": (diffusion_map, "diffusion map"),
-    "contrastive": (contrastive, "contrastive (40ep)"),
+    "contrastive": (contrastive, "contrastive"),
 }
 
 
-def get(name: str):
-    """Return (X, y) for a named representation."""
+def get(name: str, dataset: str = "mnist"):
+    """Return (X, y) for a named representation on the chosen dataset."""
     if name not in REGISTRY:
         raise KeyError(f"unknown representation '{name}'; choices: {list(REGISTRY)}")
-    return REGISTRY[name][0]()
+    return REGISTRY[name][0](dataset)

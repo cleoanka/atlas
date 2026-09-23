@@ -28,10 +28,14 @@ import metrics as M            # noqa: E402
 import representations as R    # noqa: E402
 
 
-def purity_sweep(noise_levels=(0.0, 0.4, 0.7, 0.9, 1.1, 1.4, 1.9, 2.8), k=M.K_DEFAULT,
-                 trials=20, seed=0):
-    """Add isotropic Gaussian noise (× feature std) to PCA-50; record purity/euclid/diffusion."""
-    X0, y = R.pca50()
+def purity_sweep(dataset="mnist", base_rep="pca50",
+                 noise_levels=(0.0, 0.4, 0.7, 0.9, 1.1, 1.4, 1.9, 2.8),
+                 k=M.K_DEFAULT, trials=20, seed=0):
+    """Add isotropic Gaussian noise (× feature std) to a base representation; record purity/acc.
+
+    base_rep starts ABOVE the transition so degrading it crosses the threshold (mnist: PCA-50;
+    imagenette: contrastive, since pixel spaces there are already near-chance)."""
+    X0, y = R.get(base_rep, dataset)
     std = float(X0.std())
     rng = np.random.default_rng(seed)
     pts = []
@@ -47,7 +51,8 @@ def purity_sweep(noise_levels=(0.0, 0.4, 0.7, 0.9, 1.1, 1.4, 1.9, 2.8), k=M.K_DE
     return pts
 
 
-def label_budget(cluster_counts=(10, 20, 30, 40, 60, 80, 120, 160), trials=25, seed=2):
+def label_budget(dataset="mnist", base_rep="pca50",
+                 cluster_counts=(10, 20, 30, 40, 60, 80, 120, 160), trials=25, seed=2):
     """PCA-50 KMeans into N clusters; name each cluster with ONE label (hard assignment).
 
     Directly measures "how many names do you need": each point gets its cluster's label.
@@ -57,7 +62,7 @@ def label_budget(cluster_counts=(10, 20, 30, 40, 60, 80, 120, 160), trials=25, s
                    by the sampling penalty).
     Reference: '1 label/class' (10 labels) via graph diffusion — a flat line to beat.
     """
-    X, y = R.pca50()
+    X, y = R.get(base_rep, dataset)
     W = M.knn_graph(X)
     per_class = M.one_label_per_class(X, W, y, trials=trials)["diffusion"]
     rng = np.random.default_rng(seed)
@@ -88,19 +93,25 @@ def label_budget(cluster_counts=(10, 20, 30, 40, 60, 80, 120, 160), trials=25, s
     return {"per_class_diffusion": float(per_class), "points": pts}
 
 
-def run():
-    print("=== purity sweep (PCA-50, noise-degraded metric) ===")
+def run(dataset="mnist"):
+    base = "contrastive" if dataset == "imagenette" else "pca50"
+    print(f"=== purity sweep · {dataset} ({base}, noise-degraded metric) ===")
     t0 = time.time()
-    sweep = purity_sweep()
-    print(f"\n=== label budget (PCA-50, KMeans clusters) ===")
-    budget = label_budget()
+    sweep = purity_sweep(dataset, base_rep=base)
+    print(f"\n=== label budget · {dataset} ({base}, KMeans clusters) ===")
+    budget = label_budget(dataset, base_rep=base)
     out = {"purity_sweep": sweep, "label_budget": budget}
     os.makedirs(os.path.join(_HERE, "results"), exist_ok=True)
-    with open(os.path.join(_HERE, "results", "sweep.json"), "w") as fh:
+    name = "sweep.json" if dataset == "mnist" else f"{dataset}_sweep.json"
+    with open(os.path.join(_HERE, "results", name), "w") as fh:
         json.dump(out, fh, indent=2)
-    print(f"\nwrote results/sweep.json  [{time.time()-t0:.0f}s]")
+    print(f"\nwrote results/{name}  [{time.time()-t0:.0f}s]")
     return out
 
 
 if __name__ == "__main__":
-    run()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--dataset", default="mnist", choices=R.DATASETS)
+    a = ap.parse_args()
+    run(dataset=a.dataset)

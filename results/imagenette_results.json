@@ -1,0 +1,60 @@
+{
+  "config": {
+    "dataset": "imagenette",
+    "n_eval": 3925,
+    "n_classes": 10,
+    "labels": "1 per class",
+    "trials": 60,
+    "k": 10,
+    "alpha": 0.99,
+    "iters": 60
+  },
+  "rows": [
+    {
+      "purity": 0.21145350716517616,
+      "bridges": 29274,
+      "components": 1,
+      "euclid_1nn": 0.1539532908704883,
+      "euclid_1nn_std": 0.024669818101713516,
+      "diffusion": 0.13313375796178345,
+      "diffusion_std": 0.026527029360226082,
+      "name": "raw",
+      "label": "raw pixels"
+    },
+    {
+      "purity": 0.22774143791596446,
+      "bridges": 27036,
+      "components": 1,
+      "euclid_1nn": 0.1579575371549894,
+      "euclid_1nn_std": 0.023239499985237024,
+      "diffusion": 0.1436815286624204,
+      "diffusion_std": 0.02827020823442217,
+      "name": "pca50",
+      "label": "PCA-50"
+    },
+    {
+      "purity": 0.21458490695598434,
+      "bridges": 22876,
+      "components": 1,
+      "euclid_1nn": 0.1313715498938429,
+      "euclid_1nn_std": 0.014718087620953701,
+      "diffusion": 0.15095966029723987,
+      "diffusion_std": 0.024513274506390667,
+      "name": "diffusion_map",
+      "label": "diffusion map"
+    },
+    {
+      "purity": 0.6976519089442552,
+      "bridges": 8434,
+      "components": 1,
+      "euclid_1nn": 0.4578259023354565,
+      "euclid_1nn_std": 0.06163181371038209,
+      "diffusion": 0.541447983014862,
+      "diffusion_std": 0.08154967207620455,
+      "name": "contrastive",
+      "label": "contrastive"
+    }
+  ],
+  "full_label_linear_upper_bound": 0.7750424448217318,
+  "n_labels_full": 2747
+}

@@ -109,6 +109,51 @@ Contrastive gömme ve değerlendirme bölmesi repoda gelir; her sayı **GPU olma
 
 ---
 
+## Gerçek fotoğraflarda tutuyor mu? — ImageNette
+
+MNIST kolaydır. O yüzden dürüst test gerçek ImageNet fotoğrafları: [ImageNette](https://github.com/fastai/imagenette) (10 sınıf — tench, church, parachute, …), sıfırdan **etiketsiz** eğitilmiş bir ResNet-18 contrastive kodlayıcı (128px, 100 epoch), sonra 3925 görüntülük doğrulama havuzunda aynı sınıf-başına-1-etiket değerlendirmesi.
+
+**Tez daha da güçleniyor.** Gerçek görüntülerde piksel metriği neredeyse işe yaramaz — ham-piksel difüzyonu şans seviyesinde (%13). Öğrenilmiş metrik %54'e sıçrar. Temsil farkı MNIST'teki +23 puandan burada **+39** puana çıkar.
+
+<p align="center"><img src="figures/imagenette_representation.png" width="70%"></p>
+
+| temsil | kenar saflığı | Öklid 1-NN | graf difüzyonu |
+|---|--:|--:|--:|
+| ham piksel | %21.1 | %15.4 | %13.3 |
+| PCA-50 | %22.8 | %15.8 | %14.4 |
+| difüzyon haritası | %21.5 | %13.1 | %15.1 |
+| **contrastive (ResNet-18)** | **%69.8** | **%45.8** | **%54.1** |
+
+**Ve faz geçişi aynı yerde.** Contrastive metriği gürültüyle boz, difüzyon naif 1-NN'in altına **~%62 kenar saflığında** iner — neredeyse MNIST eşiği (~%65). Saflık uçurumu veri kümesinin değil, *yöntemin* bir özelliği gibi.
+
+<p align="center">
+  <img src="figures/imagenette_phase.png" width="49%">
+  <img src="figures/imagenette_embedding.png" width="49%">
+</p>
+
+**Dürüst kapsam.** Az etiket **%54.1**'e ulaşır, tam-denetimli tavan **%77.5** (~2700 etiket) — tavanın ~%70'i, MNIST'in ~%96'sı değil. Bu boşluk etiketlerin değil, *temsilin* suçu: 9k görüntüde 100-epoch sıfırdan kodlayıcı mütevazı bir metriktir ve yukarıdaki barlar mütevazı bir metriğin on etiketi ne kadar taşıyabileceğini sınırladığını gösterir. Daha iyi kodlayıcı → ulaşılan tavan yükselir. Bütün mesele bu, yeniden ifade edilmiş hâli.
+
+### MNIST'e karşı ImageNette (özet)
+
+| | MNIST | ImageNette |
+|---|--:|--:|
+| ham-piksel (10 etiket) | %71.4 | %13.3 |
+| contrastive (10 etiket) | %94.7 | %54.1 |
+| **temsil farkı** | **+23 puan** | **+39 puan** |
+| tam-etiket tavanı | %98.6 | %77.5 |
+| tavanın yakalanan oranı | ~%96 | ~%70 |
+| faz-geçişi eşiği | ~%65 saflık | ~%62 saflık |
+
+```bash
+python src/train_contrastive_imagenette.py --epochs 100 --img 128   # Apple GPU'da ~40 dk
+python src/evaluate.py --dataset imagenette
+python src/sweep.py --dataset imagenette && python figures/make_imagenette_figures.py
+```
+
+Eğitilmiş gömme (`data/imagenette_emb.npz`) repoda gelir; tablo ve figürler **GPU olmadan** yeniden üretilir.
+
+---
+
 ## Bu ne
 
-Klasik bir primitifin temiz, dürüst bir **ölçümü** — yeni bir algoritma değil: etiket yayılımı Zhou ve ark. (2004), difüzyon haritaları Coifman & Lafon (2006). atlas'ın kattığı şey, okunabilir bir veri kümesinde anatomisi — kenar-saflığı faz geçişi, temsil-her-şeydir farkı ve modlar-sınıflar-değil etiket yasası — her biri tek komutla üretilir. MIT lisanslı.
+Klasik bir primitifin temiz, dürüst bir **ölçümü** — yeni bir algoritma değil: etiket yayılımı Zhou ve ark. (2004), difüzyon haritaları Coifman & Lafon (2006). atlas'ın kattığı şey, iki okunabilir veri kümesinde anatomisi — kenar-saflığı faz geçişi (MNIST *ve* ImageNette'te aynı ~%60-65 eşik), temsil-her-şeydir farkı ve modlar-sınıflar-değil etiket yasası — her biri tek komutla üretilir. MIT lisanslı.

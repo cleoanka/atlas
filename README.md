@@ -32,6 +32,27 @@ The whole 23-point spread is the **metric** — how you decide which points are 
 
 ---
 
+## Use it
+
+```bash
+git clone https://github.com/cleoanka/atlas && cd atlas
+pip install -r requirements.txt
+
+python src/evaluate.py                        # MNIST table   -> results/results.json
+python src/sweep.py                           # MNIST sweep   -> results/sweep.json
+python figures/make_figures.py                # regenerate every MNIST figure + the cover GIF
+
+python src/evaluate.py --dataset imagenette   # ImageNette table
+python src/sweep.py    --dataset imagenette
+python figures/make_imagenette_figures.py     # regenerate the ImageNette figures
+```
+
+Everything reproduces **without a GPU**: the trained embeddings (`contrastive_emb.npz`, `data/imagenette_emb.npz`) ship in the repo; the raw datasets download themselves only if you retrain. To retrain an encoder yourself: `pip install torch` then `python src/train_contrastive.py 40` (MNIST) or `python src/train_contrastive_imagenette.py --epochs 100 --img 128` (ImageNette; MPS / CUDA / CPU auto). A 5-cell walk-through is in [`notebooks/demo.ipynb`](notebooks/demo.ipynb).
+
+**Layout.** `src/` — representations, the metric protocol (`metrics.py`), evaluation, sweep, trainers. `figures/` — one `make_figN_*.py` per figure (`make_figures.py` runs all). `results/` — the JSON numbers (source of truth). `notebooks/demo.ipynb` — the idea in five cells.
+
+---
+
 ## The mechanism — the math
 
 **The graph.** Embed each of the $n$ points with a representation $\phi$, join every point to its $k$ nearest neighbours, weight each edge by a Gaussian kernel, symmetrise ($W=W^{\top}$), and normalise with the degree matrix $D=\operatorname{diag}(\sum_j W_{ij})$:
@@ -109,6 +130,51 @@ The contrastive embedding and eval split ship in the repo, so every number repro
 
 ---
 
+## Does it hold on real photographs? — ImageNette
+
+MNIST is easy. So the honest test is real ImageNet photos: [ImageNette](https://github.com/fastai/imagenette) (10 classes — tench, church, parachute, …), a ResNet-18 contrastive encoder trained from scratch **with no labels** (128px, 100 epochs), then the identical 1-label-per-class evaluation on the 3925-image validation pool.
+
+**The thesis gets *stronger*.** On real images a pixel metric is near useless — raw-pixel diffusion lands at chance (13%). The learned metric jumps to 54%. The representation gap widens from +23 points on MNIST to **+39** here.
+
+<p align="center"><img src="figures/imagenette_representation.png" width="70%"></p>
+
+| representation | edge purity | Euclid 1-NN | graph diffusion |
+|---|--:|--:|--:|
+| raw pixels | 21.1% | 15.4% | 13.3% |
+| PCA-50 | 22.8% | 15.8% | 14.4% |
+| diffusion map | 21.5% | 13.1% | 15.1% |
+| **contrastive (ResNet-18)** | **69.8%** | **45.8%** | **54.1%** |
+
+**And the phase transition sits at the same place.** Degrade the contrastive metric with noise and diffusion crosses below naive 1-NN at **~62% edge purity** — essentially the MNIST threshold (~65%). The purity cliff looks like a property of the *method*, not the dataset.
+
+<p align="center">
+  <img src="figures/imagenette_phase.png" width="49%">
+  <img src="figures/imagenette_embedding.png" width="49%">
+</p>
+
+**Honest scope.** Few labels reach **54.1%** against a fully-supervised ceiling of **77.5%** (~2700 labels) — ~70% of the ceiling, not MNIST's ~96%. That gap is the *representation's* fault, not the labels': a 100-epoch from-scratch encoder on 9k images is a modest metric, and the bars above show a modest metric caps how far ten labels can travel. Better encoder → higher ceiling reached. That is the whole point, restated.
+
+### MNIST vs ImageNette (summary)
+
+| | MNIST | ImageNette |
+|---|--:|--:|
+| raw-pixel (10 labels) | 71.4% | 13.3% |
+| contrastive (10 labels) | 94.7% | 54.1% |
+| **representation gap** | **+23 pts** | **+39 pts** |
+| full-label ceiling | 98.6% | 77.5% |
+| fraction of ceiling reached | ~96% | ~70% |
+| phase-transition threshold | ~65% purity | ~62% purity |
+
+```bash
+python src/train_contrastive_imagenette.py --epochs 100 --img 128   # ~40 min on an Apple GPU
+python src/evaluate.py --dataset imagenette
+python src/sweep.py --dataset imagenette && python figures/make_imagenette_figures.py
+```
+
+The trained embedding (`data/imagenette_emb.npz`) ships in the repo, so the table and figures reproduce **without a GPU** (ImageNette itself auto-downloads only if you retrain).
+
+---
+
 ## What this is
 
-A clean, honest **measurement** of a classic primitive, not a new algorithm: label spreading is Zhou et al. (2004), diffusion maps are Coifman & Lafon (2006). What atlas adds is the anatomy on a legible dataset — the edge-purity phase transition, the representation-is-everything gap, and the modes-not-classes label law — each reproduced from one command. MIT licensed.
+A clean, honest **measurement** of a classic primitive, not a new algorithm: label spreading is Zhou et al. (2004), diffusion maps are Coifman & Lafon (2006). What atlas adds is the anatomy on two legible datasets — the edge-purity phase transition (same ~60-65% threshold on MNIST *and* ImageNette), the representation-is-everything gap, and the modes-not-classes label law — each reproduced from one command. MIT licensed.
