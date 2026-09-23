@@ -166,6 +166,7 @@ def main():
     ap.add_argument("--batch", type=int, default=512)
     ap.add_argument("--lr", type=float, default=3e-3)
     ap.add_argument("--backbone", default="resnet18", choices=["resnet18", "resnet50"])
+    ap.add_argument("--tau", type=float, default=0.2, help="NT-Xent temperature (lower=harder negatives, e.g. 0.1)")
     a = ap.parse_args()
     use_amp = (DEV == "cuda")                                  # mixed precision: big speed/VRAM win on NVIDIA
     print(f"device={DEV}  backbone={a.backbone}  img={a.img}  batch={a.batch}  "
@@ -194,7 +195,7 @@ def main():
             v1 = augment(xb, a.img); v2 = augment(xb, a.img)
             opt.zero_grad()
             with torch.autocast(device_type=amp_dev, enabled=use_amp):
-                loss = nt_xent(head(enc(v1)), head(enc(v2)))
+                loss = nt_xent(head(enc(v1)), head(enc(v2)), tau=a.tau)
             if use_amp:
                 scaler.scale(loss).backward(); scaler.step(opt); scaler.update()
             else:

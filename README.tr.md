@@ -153,12 +153,30 @@ MNIST kolaydır. O yüzden dürüst test gerçek ImageNet fotoğrafları: [Image
 | faz-geçişi eşiği | ~%65 saflık | ~%63 saflık |
 
 ```bash
-python src/train_contrastive_imagenette.py --epochs 100 --img 128   # Apple GPU'da ~40 dk
+python src/train_contrastive_imagenette.py --epochs 300 --img 160 --batch 512   # hızlı GPU'da ~40 dk
 python src/evaluate.py --dataset imagenette
 python src/sweep.py --dataset imagenette && python figures/make_imagenette_figures.py
 ```
 
 Eğitilmiş gömme (`data/imagenette_emb.npz`) repoda gelir; tablo ve figürler **GPU olmadan** yeniden üretilir. **Mac (MPS) ve NVIDIA (CUDA, RTX 50-serisi dahil) için tam kurulum — torch cu128 kurulumu, VRAM rehberi, önerilen config'ler, AMP — [`docs/TRAINING.md`](docs/TRAINING.md)'de** (cihaz otomatik seçilir; CUDA'da mixed-precision açık; daha çok kapasite için `--backbone resnet50`).
+
+---
+
+## Daha fazlası — daha iyi cetvel mi, daha iyi seçilmiş etiket mi?
+
+İki doğal yükseltme, her biri dürüst ablasyon olarak ölçüldü (`src/enhance.py`, shipped gömmeler üzerinde):
+
+1. **Riemann metriği** — tek global mesafe ölçeği yerine *yerel-uyarlanır, anizotropik* cetvel: self-tuning per-nokta ölçek, Coifman α=1 normalizasyonu (**Laplace–Beltrami** operatörünü = manifoldun içsel geometrisini geri verir), ve **yerel ters-kovaryans metrik tensörü** g(x) (Mahalanobis; "her yönün kendi ağırlığı").
+2. **Hangi noktayı etiketleyeceğini seçmek** — her örnek eşit iyi bir tohum değil. Sınıf başına **en tipik** noktayı (medoid / yoğunluk-tepesi) etiketle, rastgele değil.
+
+<p align="center"><img src="figures/fig9_enhance.png" width="82%"></p>
+
+**Sayılar ne diyor (dürüstçe):**
+
+- **İyi bir temsilde daha iyi metrik neredeyse hiç yardım etmiyor.** Contrastive'de self-tuning ve cosine düz, α=1 ~1 puan bile kaybettiriyor — encoder aynı-sınıf noktaları zaten yan yana koymuş, mesafeyi yeniden ağırlıklandırmanın düzeltecek pek şeyi kalmamış. Yerel-Mahalanobis (Riemann) metriği tam da cetvelin kötü olduğu yerde küçük *gerçek* kazanç veriyor: **ImageNette'te +1.8 puan** (zayıf metrik), MNIST'te ~0. Daha iyi cetvel yalnız cetvel kötüyken işe yarar.
+- **Asıl kaldıraç: hangi etiketi seçtiğin.** En tipik noktayı (rastgele yerine) tohumlamak **MNIST 94.7 → 97.0 (+2.3)** ve **ImageNette 61.9 → 78.5 (+16.6)** — neredeyse %83.3 tavanına. Düşük-saflıklı grafta rastgele tohum çoğu zaman atipik, sınırdaki bir görsele düşüp yanlış bölgeyi sular; prototip çekirdekte oturup temiz yayılır. Buradaki tipiklik **etiketsiz** ölçülür (graf derecesi / medoid), yani adil bir az-etiket hamlesi — ve tam olarak aktif öğrenme.
+
+Çıkarım: temsil iyi olduğunda marjinal kazanç, hesapladığın mesafede değil, **seçtiğin etikettedir**. (Başlık tablosu karşılaştırılabilirlik için kötümser *rastgele* tohumu tutar; bu, pratikte kullanacağın ek.)
 
 ---
 

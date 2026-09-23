@@ -117,3 +117,34 @@ python figures/make_imagenette_figures.py             # -> figures/imagenette_*.
 ```
 Everything downstream is representation-agnostic, so a better encoder flows straight into the table,
 the phase-transition curve, and the embedding map with no other changes.
+
+---
+
+## Pushing further (retrain levers, best on a fast GPU)
+
+The shipped encoders are deliberately modest. To raise the ceiling (and with it the few-label
+number), these are the levers, in rough order of bang-for-buck — all need retraining, so run them
+on the CUDA box:
+
+- **Bigger batch** (`--batch`) — the cheapest real win for SimCLR: more in-batch negatives. Use the
+  largest that fits VRAM (with AMP on CUDA).
+- **Lower temperature** (`--tau 0.1`, default 0.2) — sharper separation of hard negatives; pairs
+  well with a cosine-decay LR. Already wired: `--tau`.
+- **Bigger backbone** (`--backbone resnet50`) — more capacity → higher ceiling. Already wired.
+- **Longer** (`--epochs 800`) — SimCLR keeps improving for many hundreds of epochs; cheap on CUDA.
+- **Non-linear projection head** — *already implemented*: a 2-layer MLP head is trained and then
+  discarded; evaluation uses the raw backbone output. (This is worth ~+10 pts and is on by default.)
+
+Two heavier upgrades not yet in the code (documented so you can add them on the GPU box):
+
+- **Multi-crop (SwAV):** instead of 2 global crops, use 2 global + 4–6 small local crops and match
+  local↔global. Strong gains from forcing part↔whole consistency; ~1.5–2× the forward cost.
+- **Momentum encoder + memory bank (MoCo):** a second, momentum-updated key encoder feeding a queue
+  of tens of thousands of negatives — decouples "number of negatives" from batch size, ideal for an
+  8 GB GPU. A ~150-line addition (key encoder, EMA update, queue); best implemented and tested
+  directly on the CUDA box.
+
+After any retrain, re-run `evaluate.py --dataset imagenette` + `make_imagenette_figures.py`; the
+numbers flow straight through. And note the separate finding in the README's "Squeezing more"
+section: once the encoder is good, **choosing the most-typical point to label** (`src/enhance.py`,
+medoid/density seed) buys more than any metric tweak.

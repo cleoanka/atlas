@@ -1,0 +1,129 @@
+{
+  "dataset": "mnist",
+  "rows": [
+    {
+      "config": "baseline (euclid, median, random)",
+      "acc": 0.9468616666666667,
+      "std": 0.03567505240204826,
+      "purity": 0.9662218105783129
+    },
+    {
+      "config": "cosine",
+      "metric": "cosine",
+      "acc": 0.9468616666666667,
+      "std": 0.03567505240204826,
+      "purity": 0.9662218105783129
+    },
+    {
+      "config": "self_tuning scale",
+      "scale": "self_tuning",
+      "acc": 0.9468833333333334,
+      "std": 0.034908046668672574,
+      "purity": 0.9662218105783129
+    },
+    {
+      "config": "anisotropic \u03b1=1 (Laplace-Beltrami)",
+      "alpha": 1.0,
+      "acc": 0.9351833333333333,
+      "std": 0.041267453546617365,
+      "purity": 0.9662218105783129
+    },
+    {
+      "config": "local Mahalanobis g(x)",
+      "metric": "mahalanobis",
+      "acc": 0.9493583333333333,
+      "std": 0.034265557496640196,
+      "purity": 0.9660487722173556
+    },
+    {
+      "config": "seed: density-peak",
+      "seed": "density",
+      "acc": 0.9643,
+      "std": 0.0,
+      "purity": 0.9662218105783129
+    },
+    {
+      "config": "seed: medoid",
+      "seed": "medoid",
+      "acc": 0.9702,
+      "std": 0.0,
+      "purity": 0.9662218105783129
+    },
+    {
+      "config": "BEST: self_tuning+\u03b1=1+density",
+      "scale": "self_tuning",
+      "alpha": 1.0,
+      "seed": "density",
+      "acc": 0.9555,
+      "std": 0.0,
+      "purity": 0.9662218105783129
+    }
+  ],
+  "grid": [
+    {
+      "k": 5,
+      "alpha": 0.0,
+      "acc": 0.9475899999999999
+    },
+    {
+      "k": 5,
+      "alpha": 0.5,
+      "acc": 0.9455200000000001
+    },
+    {
+      "k": 5,
+      "alpha": 1.0,
+      "acc": 0.9348000000000001
+    },
+    {
+      "k": 10,
+      "alpha": 0.0,
+      "acc": 0.9507
+    },
+    {
+      "k": 10,
+      "alpha": 0.5,
+      "acc": 0.9468099999999999
+    },
+    {
+      "k": 10,
+      "alpha": 1.0,
+      "acc": 0.93606
+    },
+    {
+      "k": 20,
+      "alpha": 0.0,
+      "acc": 0.94824
+    },
+    {
+      "k": 20,
+      "alpha": 0.5,
+      "acc": 0.9454100000000002
+    },
+    {
+      "k": 20,
+      "alpha": 1.0,
+      "acc": 0.9361700000000001
+    },
+    {
+      "k": 40,
+      "alpha": 0.0,
+      "acc": 0.9335849999999999
+    },
+    {
+      "k": 40,
+      "alpha": 0.5,
+      "acc": 0.933155
+    },
+    {
+      "k": 40,
+      "alpha": 1.0,
+      "acc": 0.9235599999999999
+    }
+  ],
+  "grid_best": {
+    "k": 10,
+    "alpha": 0.0,
+    "acc": 0.9507
+  }
+}

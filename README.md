@@ -174,12 +174,30 @@ MNIST is easy. So the honest test is real ImageNet photos: [ImageNette](https://
 | phase-transition threshold | ~65% purity | ~63% purity |
 
 ```bash
-python src/train_contrastive_imagenette.py --epochs 100 --img 128   # ~40 min on an Apple GPU
+python src/train_contrastive_imagenette.py --epochs 300 --img 160 --batch 512   # ~40 min on a fast GPU
 python src/evaluate.py --dataset imagenette
 python src/sweep.py --dataset imagenette && python figures/make_imagenette_figures.py
 ```
 
 The trained embedding (`data/imagenette_emb.npz`) ships in the repo, so the table and figures reproduce **without a GPU** (ImageNette itself auto-downloads only if you retrain).
+
+---
+
+## Squeezing more — a better ruler, or a better-chosen label?
+
+Two natural upgrades, each measured as an honest ablation (`src/enhance.py`) on the shipped embeddings:
+
+1. **A Riemannian metric** — replace the one global distance scale with a *locally-adaptive, anisotropic* ruler: a self-tuning per-point scale, Coifman's α=1 normalisation (which recovers the **Laplace–Beltrami** operator — the manifold's intrinsic geometry), and a **local inverse-covariance metric tensor** g(x) (Mahalanobis; "each direction gets its own weight").
+2. **Choosing which point to label** — not every example is an equally good seed. Label the **most typical** point per class (the class medoid / density peak) instead of a random one.
+
+<p align="center"><img src="figures/fig9_enhance.png" width="82%"></p>
+
+**What the numbers say (honestly):**
+
+- **A better metric barely helps an already-good representation.** On contrastive features the self-tuning and cosine variants are flat, α=1 even costs ~1 point — the encoder already put same-class points together, so re-weighting distances has little left to fix. The local-Mahalanobis (Riemannian) metric gives a small *real* gain exactly where the ruler was worse: **+1.8 pts on ImageNette** (weaker metric), ~0 on MNIST. A better ruler helps only where the ruler was bad.
+- **Which label you pick is the big lever.** Seeding the *most typical* point instead of a random one lifts **MNIST 94.7 → 97.0 (+2.3)** and **ImageNette 61.9 → 78.5 (+16.6)** — nearly to the 83.3% ceiling. On a lower-purity graph a random seed often lands on an atypical, boundary image and floods the wrong region; the prototype sits in the dense core and propagates cleanly. Typicality here is measured *without labels* (graph degree / medoid), so it's a fair few-label move — and it's exactly active learning.
+
+Takeaway: once the representation is good, the marginal returns are in the **label you choose**, not the distance you compute. (The headline table keeps the pessimistic *random* seed for comparability; this is the add-on you'd use in practice.)
 
 ---
 
