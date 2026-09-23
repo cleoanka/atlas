@@ -39,16 +39,19 @@ def main():
     fig = plt.figure(figsize=(12.8, 4.2))
     fig.patch.set_facecolor(st.PAPER)
 
-    # ---- right: the art ----
+    # ---- right: the art (glowing two-moons diffusion) ----
     ax = fig.add_axes([0.52, 0.02, 0.46, 0.96])
-    ax.add_collection(LineCollection(segs, colors="#dfe2ea", linewidths=0.7, zorder=1))
+    ax.set_facecolor(st.PAPER)
+    ax.add_collection(LineCollection(segs, colors=st.HAIR, linewidths=0.6, zorder=1))
     cols = np.where(cls == 1, st.ORANGE, st.BLUE)
-    ax.scatter(X[:, 0], X[:, 1], s=42, c=cols, edgecolors="white", linewidths=0.5, zorder=2)
-    ax.scatter(X[seeds, 0], X[seeds, 1], s=520, marker="*",
-               c=[st.BLUE, st.ORANGE], edgecolors=st.INK, linewidths=1.8, zorder=5)
+    ax.scatter(X[:, 0], X[:, 1], s=120, c=cols, alpha=0.14, linewidths=0, zorder=2)   # glow
+    ax.scatter(X[:, 0], X[:, 1], s=34, c=cols, edgecolors=st.PAPER, linewidths=0.4, zorder=3)
+    ax.scatter(X[seeds, 0], X[seeds, 1], s=760, marker="*", c=[st.BLUE, st.ORANGE],
+               alpha=0.22, linewidths=0, zorder=4)                                    # star glow
+    ax.scatter(X[seeds, 0], X[seeds, 1], s=460, marker="*", c=[st.BLUE, st.ORANGE],
+               edgecolors="white", linewidths=1.4, zorder=5)
     ax.set_xticks([]); ax.set_yticks([]); ax.set_aspect("equal")
     ax.spines[:].set_visible(False); ax.margins(0.04)
-    ax.set_facecolor(st.PAPER)
 
     # ---- left: the words ----
     fig.text(0.056, 0.955, "FEW-LABEL LEARNING", fontsize=11.5, fontweight="bold",
@@ -63,11 +66,11 @@ def main():
              fontsize=13, color=st.SUBINK, va="top", linespacing=1.5)
     # headline chips
     fig.text(0.058, 0.135, "  10 labels → 94.7%  ", fontsize=15, fontweight="bold",
-             color="white", va="center",
+             color="#0d1017", va="center",
              bbox=dict(boxstyle="round,pad=0.5", fc=st.ORANGE, ec="none"))
     fig.text(0.27, 0.135, "  7000 labels → 98.6%  ", fontsize=15, fontweight="bold",
-             color="white", va="center",
-             bbox=dict(boxstyle="round,pad=0.5", fc=st.MUTED, ec="none"))
+             color=st.INK, va="center",
+             bbox=dict(boxstyle="round,pad=0.5", fc="#1b2130", ec=st.HAIR))
     st.save(fig, "banner.png")
 
 

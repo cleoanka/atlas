@@ -11,6 +11,11 @@
 Aradaki 23 puanlık farkın tamamı **metriktir** — hangi noktaların "yakın" sayıldığı. Etiket ise geometrinin zaten bulduğu bir kümeye yalnızca isim koyar. Bu repo bunu kesinleştirir, ölçer ve tam olarak nerede kırıldığını gösterir.
 
 <p align="center"><img src="figures/fig2_diffusion.gif" width="460"></p>
+<p align="center"><em>İki etiketli nokta (yıldızlar). Renk graf boyunca akıp her ayı doldurur — boşluğu asla geçmez.</em></p>
+
+### Sade anlatım
+
+Binlerce görselin var, ama sadece bir avucunu etiketleyebiliyorsun. *Sınıflandırıcı eğitmek* yerine: (1) her görseli **etiketsiz** bir kodlayıcıyla öznitelik vektörüne çevir, (2) her görseli öznitelik uzayındaki en yakın komşularına bağlayıp graf kur, (3) **sınıf başına bir etiketli tohum** bırak ve her etiketin **graf kenarları boyunca yayılmasını** sağla — ta ki her düğüm renklenene dek. İnanılmaz iyi çalışır — *yeter ki* öznitelik uzayındaki komşular gerçekten aynı sınıftan olsun. İşte o tek koşul, **kenar saflığı**, her şeye karar verir ve bunu tamamen kodlayıcı belirler. Yani asıl soru hiçbir zaman "etiketleri nasıl kullanırız" değil — "metrik ne kadar iyi"dir.
 
 ---
 
@@ -27,6 +32,7 @@ Aradaki 23 puanlık farkın tamamı **metriktir** — hangi noktaların "yakın"
 **Öklid mesafesi manifoldda yalan söyler.** İki rakam piksel uzayında yakın ama farklı sınıflardan olabilir — çünkü aralarındaki düz çizgi iki katman arasındaki boşluğu keser. O metrikteki en-yakın-komşu, katmanların yaklaştığı her yerde yanılır.
 
 <p align="center"><img src="figures/fig1_why_euclid_fails.png" width="80%"></p>
+<p align="center"><em>Aynı nokta, aynı komşuluk büyüklüğü. Düz-çizgi topu diğer koldan 42 nokta kapar; graf komşuluğu 0 — manifoldu takip eder.</em></p>
 
 **Graf metriği düzeltir.** Her noktayı k en yakın komşusuna bağla ve etiketin düz çizgide sıçraması yerine *kenarlar boyunca akmasına* izin ver. Artık "yakın" demek *veri boyunca ulaşılabilir* demektir. Sınıf başına tek tohumdan başlayan bu akış tüm veriyi boyar — yeter ki kenarlar çoğunlukla aynı sınıftan noktaları bağlasın. Her şeye karar veren tek sayı **kenar saflığıdır**.
 
@@ -76,6 +82,7 @@ Sonucun işe yarar kısmı bu: *ne zaman uğraşmayacağını* söyler. Temsilin
 Temsili $N$ kümeye ayır ve her birine bir etiket ver. $N$ büyüdükçe doğruluk küme-başı çoğunluk tavanına doğru tırmanır — doğruluğu *isimlerle* satın alıyorsun ve para birimi **modlar, sınıflar değil**. On etiket (sınıf başına bir), bu eğrinin sadece en kaba noktası.
 
 <p align="center"><img src="figures/fig5_label_budget.png" width="64%"></p>
+<p align="center"><em>Daha çok küme = daha çok isim = daha çok doğruluk, küme-başı tavana kadar. x-ekseni etiket bütçen; para birimi modlar.</em></p>
 
 ---
 
@@ -84,6 +91,7 @@ Temsili $N$ kümeye ayır ve her birine bir etiket ver. $N$ büyüdükçe doğru
 Contrastive gömme; solda gerçek etiketlerle, sağda yalnızca 10 tohumdan difüze edilen etiketle (siyah yıldızlar; hatalar kırmızı). On isim, bütün harita.
 
 <p align="center"><img src="figures/fig6_embedding.png" width="88%"></p>
+<p align="center"><em>Solda: gerçek rakamla renklendirilmiş gömme. Sağda: 10 tohumdan (yıldızlar) difüze edilen etiket; kırmızı = sınırlardaki %4 hata.</em></p>
 
 ---
 

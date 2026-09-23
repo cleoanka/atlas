@@ -29,7 +29,7 @@ def main():
               "same 10 labels every time — only the representation changes", accent=st.ORANGE)
 
     x = np.arange(4)
-    bars = ax.bar(x, acc, width=0.66, color=colors, zorder=3)
+    bars = st.glow_bars(ax, x, acc, colors, width=0.66, zorder=3)
     ax.axhline(ceiling, ls=(0, (4, 3)), color=st.INK, lw=1.5, zorder=2)
     ax.text(-0.38, ceiling + 1.0, f"fully-supervised ceiling · {ceiling:.1f}%",
             ha="left", va="bottom", fontsize=11.5, color=st.INK)

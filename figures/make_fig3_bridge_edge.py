@@ -34,7 +34,7 @@ def draw_edges(ax, X, W):
     co = W.tocoo()
     for i, j in zip(co.row, co.col):
         if i < j:
-            ax.plot([X[i, 0], X[j, 0]], [X[i, 1], X[j, 1]], color="#dfe2ea", alpha=0.7,
+            ax.plot([X[i, 0], X[j, 0]], [X[i, 1], X[j, 1]], color=st.HAIR, alpha=0.8,
                     lw=0.6, zorder=1)
 
 

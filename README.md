@@ -11,6 +11,11 @@
 The whole 23-point spread is the **metric** — how you decide which points are "near". The label only puts a name on a cluster the geometry already found. This repo makes that precise, measurable, and shows exactly where it breaks.
 
 <p align="center"><img src="figures/fig2_diffusion.gif" width="460"></p>
+<p align="center"><em>Two labelled points (stars). Colour flows along the graph, filling each moon — never across the gap.</em></p>
+
+### In plain words
+
+You have thousands of images and can label only a handful. Instead of *training a classifier*, you (1) turn each image into a feature vector with an **unsupervised** encoder, (2) connect each image to its nearest neighbours in that feature space to form a graph, and (3) drop **one labelled seed per class** and let each label **spread along the graph edges** until every node is coloured. It works astonishingly well — *if* neighbours in feature space really are the same class. That one condition, **edge purity**, decides everything, and it is set entirely by the encoder. So the real question is never "how do we use the labels" — it is "how good is the metric."
 
 ---
 
@@ -27,6 +32,7 @@ The whole 23-point spread is the **metric** — how you decide which points are 
 **Euclidean distance lies on a manifold.** Two digits can be close in pixel space yet belong to different classes, because the straight line between them cuts across the gap between two folds. Nearest-neighbour in that metric is wrong wherever the folds come close.
 
 <p align="center"><img src="figures/fig1_why_euclid_fails.png" width="80%"></p>
+<p align="center"><em>Same point, same neighbourhood size. The straight-line ball grabs 42 points from the other arm; the graph neighbourhood grabs 0 — it follows the manifold.</em></p>
 
 **A graph fixes the metric.** Connect each point to its k nearest neighbours and let a label *flow along the edges* instead of jumping in a straight line. Now "near" means *reachable along the data*. From one seed per class, that flow paints the whole dataset — as long as edges mostly connect same-class points. The single number that decides everything is **edge purity**.
 
@@ -97,6 +103,7 @@ This is the useful part of the result: it tells you *when not to bother*. If you
 Cluster the representation into $N$ groups and name each with one label. Accuracy climbs toward the per-cluster majority ceiling as $N$ grows — you buy accuracy with *names*, and the currency is **modes, not classes**. Ten labels (one per class) is just the coarsest point on this curve.
 
 <p align="center"><img src="figures/fig5_label_budget.png" width="64%"></p>
+<p align="center"><em>More clusters = more names = more accuracy, up to the per-cluster ceiling. The x-axis is your label budget; the currency is modes.</em></p>
 
 ---
 
@@ -105,6 +112,7 @@ Cluster the representation into $N$ groups and name each with one label. Accurac
 The contrastive embedding, coloured by truth (left) and by the label diffused from just 10 seeds (right, black stars; errors in red). Ten names, the whole map.
 
 <p align="center"><img src="figures/fig6_embedding.png" width="88%"></p>
+<p align="center"><em>Left: the embedding coloured by true digit. Right: coloured by the label diffused from 10 seeds (stars); red = the 4% it gets wrong, all at cluster boundaries.</em></p>
 
 ---
 

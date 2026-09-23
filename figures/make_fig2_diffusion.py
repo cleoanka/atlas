@@ -22,7 +22,7 @@ import matplotlib.colors as _mc
 
 C0 = np.array(_mc.to_rgb(st.BLUE))    # class 0
 C1 = np.array(_mc.to_rgb(st.ORANGE))  # class 1
-CG = np.array([0.86, 0.87, 0.90])     # grey  (wavefront not arrived yet)
+CG = np.array([0.16, 0.19, 0.26])     # dark grey (wavefront not arrived yet)
 
 
 def colors(reached, p1):
@@ -70,9 +70,9 @@ def main():
     seed_cols = [C0, C1]
 
     fig, ax = plt.subplots(figsize=(8, 6.4))
-    ax.add_collection(LineCollection(segs, colors="#dddddd", linewidths=0.5, zorder=1))
+    ax.add_collection(LineCollection(segs, colors=st.HAIR, linewidths=0.6, zorder=1))
     scat = ax.scatter(X[:, 0], X[:, 1], s=34, c=colors(dist <= 0, p1),
-                      edgecolors="white", linewidths=0.3, zorder=2)
+                      edgecolors=st.PAPER, linewidths=0.3, zorder=2)
     ax.scatter(X[seeds, 0], X[seeds, 1], s=430, marker="*", c=seed_cols,
                edgecolors="black", linewidths=1.5, zorder=5)
     ax.set_xticks([]); ax.set_yticks([]); ax.set_aspect("equal")
@@ -97,9 +97,9 @@ def main():
 
     # static final-state PNG (README fallback / thumbnail)
     fig2, ax2 = plt.subplots(figsize=(8, 6.4))
-    ax2.add_collection(LineCollection(segs, colors="#dddddd", linewidths=0.5, zorder=1))
+    ax2.add_collection(LineCollection(segs, colors=st.HAIR, linewidths=0.6, zorder=1))
     ax2.scatter(X[:, 0], X[:, 1], s=34, c=colors(np.ones(len(y), bool), p1),
-                edgecolors="white", linewidths=0.3, zorder=2)
+                edgecolors=st.PAPER, linewidths=0.3, zorder=2)
     ax2.scatter(X[seeds, 0], X[seeds, 1], s=430, marker="*", c=seed_cols,
                 edgecolors="black", linewidths=1.5, zorder=5)
     ax2.set_title(f"2 labels → {acc*100:.0f}% of both moons, correctly", fontsize=18)
