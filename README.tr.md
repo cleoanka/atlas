@@ -150,7 +150,7 @@ python src/evaluate.py --dataset imagenette
 python src/sweep.py --dataset imagenette && python figures/make_imagenette_figures.py
 ```
 
-Eğitilmiş gömme (`data/imagenette_emb.npz`) repoda gelir; tablo ve figürler **GPU olmadan** yeniden üretilir.
+Eğitilmiş gömme (`data/imagenette_emb.npz`) repoda gelir; tablo ve figürler **GPU olmadan** yeniden üretilir. **Mac (MPS) ve NVIDIA (CUDA, RTX 50-serisi dahil) için tam kurulum — torch cu128 kurulumu, VRAM rehberi, önerilen config'ler, AMP — [`docs/TRAINING.md`](docs/TRAINING.md)'de** (cihaz otomatik seçilir; CUDA'da mixed-precision açık; daha çok kapasite için `--backbone resnet50`).
 
 ---
 

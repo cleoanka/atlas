@@ -26,10 +26,14 @@ DEV = ("mps" if torch.backends.mps.is_available()
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-# ------------------------------------------------------------------ ResNet-18 (pure torch)
+# ------------------------------------------------------------------ ResNet (pure torch, 18 & 50)
 class Block(nn.Module):
-    def __init__(s, cin, cout, stride=1):
+    """BasicBlock (ResNet-18/34)."""
+    exp = 1
+
+    def __init__(s, cin, width, stride=1):
         super().__init__()
+        cout = width * s.exp
         s.c1 = nn.Conv2d(cin, cout, 3, stride, 1, bias=False); s.b1 = nn.BatchNorm2d(cout)
         s.c2 = nn.Conv2d(cout, cout, 3, 1, 1, bias=False); s.b2 = nn.BatchNorm2d(cout)
         s.sc = nn.Sequential()
@@ -41,27 +45,68 @@ class Block(nn.Module):
         return F.relu(y + s.sc(x))
 
 
-class ResNet18(nn.Module):
-    def __init__(s, dim=512):
+class Bottleneck(nn.Module):
+    """Bottleneck block (ResNet-50/101)."""
+    exp = 4
+
+    def __init__(s, cin, width, stride=1):
         super().__init__()
-        # real-ResNet stem: 7×7 s2 conv + 3×3 s2 maxpool → 4× downsample before the blocks
-        # (skipping this is what OOM'd MPS: full-res 128×128×64 activations at batch 256).
-        s.stem = nn.Sequential(
-            nn.Conv2d(3, 64, 7, 2, 3, bias=False), nn.BatchNorm2d(64), nn.ReLU(),
-            nn.MaxPool2d(3, 2, 1))
-        cfg = [(64, 64, 1), (64, 64, 1), (64, 128, 2), (128, 128, 1),
-               (128, 256, 2), (256, 256, 1), (256, 512, 2), (512, 512, 1)]
-        s.blocks = nn.Sequential(*[Block(a, b, st) for a, b, st in cfg])
-        s.dim = dim
+        cout = width * s.exp
+        s.c1 = nn.Conv2d(cin, width, 1, bias=False); s.b1 = nn.BatchNorm2d(width)
+        s.c2 = nn.Conv2d(width, width, 3, stride, 1, bias=False); s.b2 = nn.BatchNorm2d(width)
+        s.c3 = nn.Conv2d(width, cout, 1, bias=False); s.b3 = nn.BatchNorm2d(cout)
+        s.sc = nn.Sequential()
+        if stride != 1 or cin != cout:
+            s.sc = nn.Sequential(nn.Conv2d(cin, cout, 1, stride, bias=False), nn.BatchNorm2d(cout))
+
+    def forward(s, x):
+        y = F.relu(s.b1(s.c1(x))); y = F.relu(s.b2(s.c2(y))); y = s.b3(s.c3(y))
+        return F.relu(y + s.sc(x))
+
+
+class ResNet(nn.Module):
+    """Generalised ResNet. real-ResNet stem (7×7 s2 + 3×3 s2 maxpool) → 4× downsample first
+    (skipping it is what OOM'd MPS: full-res activations). out_dim = last channels."""
+
+    def __init__(s, block, layers, widths=(64, 128, 256, 512)):
+        super().__init__()
+        s.stem = nn.Sequential(nn.Conv2d(3, 64, 7, 2, 3, bias=False), nn.BatchNorm2d(64),
+                               nn.ReLU(), nn.MaxPool2d(3, 2, 1))
+        cin, blocks = 64, []
+        for i, (w, n) in enumerate(zip(widths, layers)):
+            for j in range(n):
+                stride = 2 if (i > 0 and j == 0) else 1
+                blocks.append(block(cin, w, stride)); cin = w * block.exp
+        s.blocks = nn.Sequential(*blocks)
+        s.out_dim = cin
 
     def forward(s, x):
         x = s.blocks(s.stem(x))
-        return F.adaptive_avg_pool2d(x, 1).flatten(1)      # (B, 512)
+        return F.adaptive_avg_pool2d(x, 1).flatten(1)
+
+
+def make_backbone(name="resnet18"):
+    if name == "resnet50":
+        return ResNet(Bottleneck, [3, 4, 6, 3])     # out_dim 2048
+    return ResNet(Block, [2, 2, 2, 2])              # out_dim 512      # (B, 512)
 
 
 # ------------------------------------------------------------------ GPU-side SimCLR augmentation
+def _gaussian_blur(x, p=0.5, k=9):
+    """SimCLR blur: depthwise Gaussian conv on a random p-fraction of the batch (random sigma)."""
+    B, C, H, W = x.shape
+    dev = x.device
+    sigma = 0.1 + torch.rand(1, device=dev).item() * 1.9
+    ax = torch.arange(k, device=dev) - k // 2
+    g = torch.exp(-(ax ** 2) / (2 * sigma ** 2)); g = g / g.sum()
+    ker = (g[:, None] * g[None, :]).view(1, 1, k, k).repeat(C, 1, 1, 1)
+    xb = F.conv2d(x, ker, padding=k // 2, groups=C)
+    m = (torch.rand(B, 1, 1, 1, device=dev) < p).float()
+    return x * (1 - m) + xb * m
+
+
 def augment(x, out):
-    """x: (B,3,H,W) float[0,1] -> a differently-augmented (B,3,out,out): RRC+flip + colour jitter."""
+    """x: (B,3,H,W) float[0,1] -> a differently-augmented (B,3,out,out): RRC+flip + colour jitter + blur."""
     B = x.shape[0]
     dev = x.device
     # random-resized-crop + horizontal flip via a random affine grid
@@ -86,6 +131,8 @@ def augment(x, out):
     # random grayscale (whole image) with prob 0.2
     g = (torch.rand(B, 1, 1, 1, device=dev) < 0.2).float()
     x = x * (1 - g) + gray.expand_as(x) * g
+    # gaussian blur (SimCLR): random half of the batch
+    x = _gaussian_blur(x, p=0.5)
     return x
 
 
@@ -114,12 +161,15 @@ def load_train(base):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--epochs", type=int, default=120)
-    ap.add_argument("--img", type=int, default=128)
-    ap.add_argument("--batch", type=int, default=256)
-    ap.add_argument("--lr", type=float, default=2e-3)
+    ap.add_argument("--epochs", type=int, default=300)
+    ap.add_argument("--img", type=int, default=160)
+    ap.add_argument("--batch", type=int, default=512)
+    ap.add_argument("--lr", type=float, default=3e-3)
+    ap.add_argument("--backbone", default="resnet18", choices=["resnet18", "resnet50"])
     a = ap.parse_args()
-    print(f"device={DEV}  img={a.img}  batch={a.batch}  epochs={a.epochs}", flush=True)
+    use_amp = (DEV == "cuda")                                  # mixed precision: big speed/VRAM win on NVIDIA
+    print(f"device={DEV}  backbone={a.backbone}  img={a.img}  batch={a.batch}  "
+          f"epochs={a.epochs}  amp={use_amp}", flush=True)
 
     base = int(a.img * 1.15)                                   # a little headroom for random crop
     Xtr_np = load_train(base)
@@ -127,11 +177,14 @@ def main():
     n = Xtr.shape[0]
     print(f"train tensor {tuple(Xtr.shape)} on {DEV}", flush=True)
 
-    enc = ResNet18().to(DEV)
-    head = nn.Sequential(nn.Linear(512, 512), nn.ReLU(), nn.Linear(512, 128)).to(DEV)
+    enc = make_backbone(a.backbone).to(DEV)
+    dim = enc.out_dim
+    head = nn.Sequential(nn.Linear(dim, dim), nn.ReLU(), nn.Linear(dim, 128)).to(DEV)
     opt = torch.optim.Adam(list(enc.parameters()) + list(head.parameters()), a.lr, weight_decay=1e-6)
     steps = a.epochs * (n // a.batch)
     sch = torch.optim.lr_scheduler.OneCycleLR(opt, a.lr, total_steps=steps, pct_start=0.05)
+    scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
+    amp_dev = "cuda" if DEV == "cuda" else "cpu"
 
     enc.train(); head.train()
     for ep in range(a.epochs):
@@ -139,23 +192,46 @@ def main():
         for i in range(0, n - a.batch + 1, a.batch):
             xb = Xtr[perm[i:i + a.batch]].float() / 255.0
             v1 = augment(xb, a.img); v2 = augment(xb, a.img)
-            loss = nt_xent(head(enc(v1)), head(enc(v2)))
-            opt.zero_grad(); loss.backward(); opt.step(); sch.step()
-            tot += loss.item(); nb += 1
+            opt.zero_grad()
+            with torch.autocast(device_type=amp_dev, enabled=use_amp):
+                loss = nt_xent(head(enc(v1)), head(enc(v2)))
+            if use_amp:
+                scaler.scale(loss).backward(); scaler.step(opt); scaler.update()
+            else:
+                loss.backward(); opt.step()
+            sch.step(); tot += loss.item(); nb += 1
         print(f"  ep{ep+1}/{a.epochs} loss={tot/nb:.4f} {time.time()-t0:.0f}s", flush=True)
 
-    # embed the validation pool (no aug), L2-normalised
+    # save the trained encoder weights (local keepsake; .pt is gitignored)
+    ckpt = os.path.join(_ROOT, "models", "imagenette_encoder.pt")
+    os.makedirs(os.path.dirname(ckpt), exist_ok=True)
+    torch.save({"encoder": enc.state_dict(), "head": head.state_dict(),
+                "arch": a.backbone, "img": a.img, "epochs": a.epochs, "dim": dim}, ckpt)
+    print(f"saved -> models/imagenette_encoder.pt", flush=True)
+
+    # embed a set of uint8 images (center region, no aug), L2-normalised
     enc.eval()
+
+    def embed(Xu8):
+        X = torch.from_numpy(Xu8).to(DEV).permute(0, 3, 1, 2).float() / 255.0
+        outs = []
+        with torch.no_grad():
+            for i in range(0, len(X), 256):
+                outs.append(F.normalize(enc(X[i:i + 256]), dim=1))
+        return torch.cat(outs).cpu().numpy().astype("float32")
+
+    # validation pool → the evaluation embedding (shipped)
     Xev_np, yev = D.eval_cache(a.img)
-    Xev = torch.from_numpy(Xev_np).to(DEV).permute(0, 3, 1, 2).float() / 255.0
-    outs = []
-    with torch.no_grad():
-        for i in range(0, len(Xev), 256):
-            outs.append(F.normalize(enc(Xev[i:i + 256]), dim=1))
-    emb = torch.cat(outs).cpu().numpy().astype("float32")
-    out = os.path.join(_ROOT, "data", "imagenette_emb.npz")
-    np.savez_compressed(out, emb=emb, y=yev)
-    print(f"done -> imagenette_emb.npz {emb.shape}", flush=True)
+    np.savez_compressed(os.path.join(_ROOT, "data", "imagenette_emb.npz"),
+                        emb=embed(Xev_np), y=yev)
+    print(f"done -> imagenette_emb.npz ({len(yev)}, 512)", flush=True)
+    # train pool (center-crop to img) → embeddings for the proper full-train linear-probe ceiling
+    _, ytr = D.train_paths()
+    c = (base - a.img) // 2
+    Xtr_crop = Xtr_np[:, c:c + a.img, c:c + a.img, :]
+    np.savez_compressed(os.path.join(_ROOT, "data", "imagenette_train_emb.npz"),
+                        emb=embed(Xtr_crop), y=ytr)
+    print(f"done -> imagenette_train_emb.npz ({len(ytr)}, 512)", flush=True)
 
 
 if __name__ == "__main__":

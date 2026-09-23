@@ -106,9 +106,15 @@ def one_label_per_class(X, W, y, trials: int = 60, seed: int = 1):
 
 def linear_upper_bound(X: np.ndarray, y: np.ndarray, train_frac: float = 0.7,
                        seed: int = 1) -> float:
-    """Fully-supervised linear probe accuracy — the ceiling all methods aim at."""
+    """Fully-supervised linear probe accuracy (70/30 split of one pool) — the ceiling."""
     rng = np.random.default_rng(seed)
     pm = rng.permutation(len(y))
     sp = int(train_frac * len(y))
     clf = LogisticRegression(max_iter=1500).fit(X[pm[:sp]], y[pm[:sp]])
     return float(clf.score(X[pm[sp:]], y[pm[sp:]]))
+
+
+def linear_probe(Xtr: np.ndarray, ytr: np.ndarray, Xte: np.ndarray, yte: np.ndarray) -> float:
+    """Fully-supervised linear probe trained on a SEPARATE train set, tested on the eval pool."""
+    clf = LogisticRegression(max_iter=2000).fit(Xtr, ytr)
+    return float(clf.score(Xte, yte))

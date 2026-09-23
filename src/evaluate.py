@@ -15,6 +15,8 @@ import os
 import sys
 import time
 
+import numpy as np
+
 _HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(_HERE, "src"))
 
@@ -25,6 +27,19 @@ import representations as R    # noqa: E402
 def _outfile(dataset):
     name = "results.json" if dataset == "mnist" else f"{dataset}_results.json"
     return os.path.join(_HERE, "results", name)
+
+
+def _ceiling(dataset, X, y):
+    """Fully-supervised linear-probe ceiling + how many labels it used.
+
+    ImageNette: if the train-set embedding is shipped, probe on the FULL 9469 train set
+    (honest ceiling) instead of a 70/30 split of the 3925 eval pool.
+    """
+    tr = os.path.join(_HERE, "data", "imagenette_train_emb.npz")
+    if dataset == "imagenette" and os.path.exists(tr):
+        d = np.load(tr)
+        return M.linear_probe(d["emb"], d["y"].astype(int), X, y), int(len(d["y"]))
+    return M.linear_upper_bound(X, y), int(0.7 * len(y))
 
 
 def run(dataset: str = "mnist", trials: int = 60, k: int = M.K_DEFAULT):
@@ -38,7 +53,7 @@ def run(dataset: str = "mnist", trials: int = 60, k: int = M.K_DEFAULT):
         res["name"] = name; res["label"] = label
         rows.append(res)
         if name == "contrastive":
-            upper = M.linear_upper_bound(X, y)
+            upper, n_full = _ceiling(dataset, X, y)
         print(f"  {label:<20} purity={res['purity']*100:5.1f}%  "
               f"euclid={res['euclid_1nn']*100:5.1f}%  "
               f"diffusion={res['diffusion']*100:5.1f}% (±{res['diffusion_std']*100:.1f})  "
@@ -49,7 +64,7 @@ def run(dataset: str = "mnist", trials: int = 60, k: int = M.K_DEFAULT):
                    "trials": trials, "k": k, "alpha": M.ALPHA, "iters": M.ITERS},
         "rows": rows,
         "full_label_linear_upper_bound": upper,
-        "n_labels_full": int(0.7 * len(y)),
+        "n_labels_full": n_full,
     }
     os.makedirs(os.path.join(_HERE, "results"), exist_ok=True)
     with open(_outfile(dataset), "w") as fh:
