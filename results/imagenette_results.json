@@ -44,17 +44,17 @@
       "label": "diffusion map"
     },
     {
-      "purity": 0.6976519089442552,
-      "bridges": 8434,
+      "purity": 0.7530876729942815,
+      "bridges": 7297,
       "components": 1,
-      "euclid_1nn": 0.4578259023354565,
-      "euclid_1nn_std": 0.06163181371038209,
-      "diffusion": 0.541447983014862,
-      "diffusion_std": 0.08154967207620455,
+      "euclid_1nn": 0.49518046709129515,
+      "euclid_1nn_std": 0.05642027127058214,
+      "diffusion": 0.618895966029724,
+      "diffusion_std": 0.0772809617004695,
       "name": "contrastive",
       "label": "contrastive"
     }
   ],
-  "full_label_linear_upper_bound": 0.7750424448217318,
-  "n_labels_full": 2747
+  "full_label_linear_upper_bound": 0.8333757961783439,
+  "n_labels_full": 9469
 }

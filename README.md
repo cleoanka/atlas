@@ -134,7 +134,7 @@ The contrastive embedding and eval split ship in the repo, so every number repro
 
 MNIST is easy. So the honest test is real ImageNet photos: [ImageNette](https://github.com/fastai/imagenette) (10 classes — tench, church, parachute, …), a ResNet-18 contrastive encoder trained from scratch **with no labels** (128px, 100 epochs), then the identical 1-label-per-class evaluation on the 3925-image validation pool.
 
-**The thesis gets *stronger*.** On real images a pixel metric is near useless — raw-pixel diffusion lands at chance (13%). The learned metric jumps to 54%. The representation gap widens from +23 points on MNIST to **+39** here.
+**The thesis gets *stronger*.** On real images a pixel metric is near useless — raw-pixel diffusion lands at chance (13%). The learned metric jumps to **62%** from the same 10 labels. The representation gap widens from +23 points on MNIST to **+49** here.
 
 <p align="center"><img src="figures/imagenette_representation.png" width="70%"></p>
 
@@ -143,27 +143,27 @@ MNIST is easy. So the honest test is real ImageNet photos: [ImageNette](https://
 | raw pixels | 21.1% | 15.4% | 13.3% |
 | PCA-50 | 22.8% | 15.8% | 14.4% |
 | diffusion map | 21.5% | 13.1% | 15.1% |
-| **contrastive (ResNet-18)** | **69.8%** | **45.8%** | **54.1%** |
+| **contrastive (ResNet-18, 300 ep)** | **75.3%** | **49.5%** | **61.9%** |
 
-**And the phase transition sits at the same place.** Degrade the contrastive metric with noise and diffusion crosses below naive 1-NN at **~62% edge purity** — essentially the MNIST threshold (~65%). The purity cliff looks like a property of the *method*, not the dataset.
+**And the phase transition sits at the same place.** Degrade the contrastive metric with noise and diffusion crosses below naive 1-NN at **~63% edge purity** — essentially the MNIST threshold (~65%). The purity cliff looks like a property of the *method*, not the dataset.
 
 <p align="center">
   <img src="figures/imagenette_phase.png" width="49%">
   <img src="figures/imagenette_embedding.png" width="49%">
 </p>
 
-**Honest scope.** Few labels reach **54.1%** against a fully-supervised ceiling of **77.5%** (~2700 labels) — ~70% of the ceiling, not MNIST's ~96%. That gap is the *representation's* fault, not the labels': a 100-epoch from-scratch encoder on 9k images is a modest metric, and the bars above show a modest metric caps how far ten labels can travel. Better encoder → higher ceiling reached. That is the whole point, restated.
+**Honest scope.** Few labels reach **61.9%** against a fully-supervised ceiling of **83.3%** (linear probe on all ~9500 train labels) — ~74% of the ceiling, still short of MNIST's ~96%. That remaining gap is the *representation's* fault, not the labels': a from-scratch ResNet-18 on 9k images is still a modest metric, and the bars above show a modest metric caps how far ten labels can travel. A heavier encoder (ResNet-50, more epochs, bigger batch — see [`docs/TRAINING.md`](docs/TRAINING.md)) raises both the ceiling and the reachable fraction. That is the whole point, restated.
 
 ### MNIST vs ImageNette (summary)
 
 | | MNIST | ImageNette |
 |---|--:|--:|
 | raw-pixel (10 labels) | 71.4% | 13.3% |
-| contrastive (10 labels) | 94.7% | 54.1% |
-| **representation gap** | **+23 pts** | **+39 pts** |
-| full-label ceiling | 98.6% | 77.5% |
-| fraction of ceiling reached | ~96% | ~70% |
-| phase-transition threshold | ~65% purity | ~62% purity |
+| contrastive (10 labels) | 94.7% | 61.9% |
+| **representation gap** | **+23 pts** | **+49 pts** |
+| full-label ceiling | 98.6% | 83.3% |
+| fraction of ceiling reached | ~96% | ~74% |
+| phase-transition threshold | ~65% purity | ~63% purity |
 
 ```bash
 python src/train_contrastive_imagenette.py --epochs 100 --img 128   # ~40 min on an Apple GPU
