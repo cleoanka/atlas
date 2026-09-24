@@ -82,6 +82,22 @@ def maha_affinity(X, k=10, dim=40, n_local=30, reg=1e-2):
     return csr_matrix((w, (A.row, A.col)), shape=(n, n))
 
 
+def snn_reweight(X, W, knn_for_snn=20):
+    """Shared-nearest-neighbour edge weighting (the 'processing' lever): multiply each affinity by
+    the fraction of neighbours its two endpoints share. Bridge edges across a gap share few
+    neighbours → suppressed; edges inside a dense cluster survive. Directly down-weights the
+    atypical/bridge nodes label mass leaks through, and combats kNN hubness in high dimensions.
+    """
+    nn = NearestNeighbors(n_neighbors=knn_for_snn + 1).fit(X)
+    _, idx = nn.kneighbors(X)
+    nbr = [set(r[1:]) for r in idx]
+    co = W.tocoo()
+    shared = np.fromiter((len(nbr[i] & nbr[j]) for i, j in zip(co.row, co.col)),
+                         dtype=float, count=co.nnz)
+    w = co.data * (shared + 1e-6) / knn_for_snn
+    return csr_matrix((w, (co.row, co.col)), shape=W.shape)
+
+
 def operator(W, alpha=0.0):
     """Normalised diffusion operator. alpha>0 = Coifman anisotropic (α=1 → Laplace–Beltrami)."""
     d = np.asarray(W.sum(1)).ravel(); d[d == 0] = 1.0
@@ -115,13 +131,15 @@ def acc_from_seeds(S, seeds, y, classes):
 
 
 def eval_config(X, y, k=10, scale="median", alpha=0.0, metric="euclid", seed="random",
-                trials=60, rng_seed=1):
+                processing="none", trials=60, rng_seed=1):
     classes = np.unique(y)
     Xu = X / (np.linalg.norm(X, axis=1, keepdims=True) + 1e-12) if metric == "cosine" else X
     if metric == "mahalanobis":
         W = maha_affinity(Xu, k)
     else:
         W = affinity(Xu, k, scale)
+    if processing == "snn":
+        W = snn_reweight(Xu, W)
     S, _ = operator(W, alpha)
     if seed == "random":
         rng = np.random.default_rng(rng_seed)
@@ -147,8 +165,10 @@ def main(dataset):
     run("self_tuning scale", scale="self_tuning")
     run("anisotropic α=1 (Laplace-Beltrami)", alpha=1.0)
     run("local Mahalanobis g(x)", metric="mahalanobis")
+    run("processing: SNN bridge-kill", processing="snn")
     run("seed: density-peak", seed="density")
     run("seed: medoid", seed="medoid")
+    run("medoid + SNN processing", seed="medoid", processing="snn")
     run("BEST: self_tuning+α=1+density", scale="self_tuning", alpha=1.0, seed="density")
 
     # k / alpha grid (quick), baseline metric, random seeds

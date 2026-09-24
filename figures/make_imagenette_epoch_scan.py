@@ -11,6 +11,7 @@ loss curve bottoms out.
 Run:  python figures/make_imagenette_epoch_scan.py   (after a training run with the updated script)
 """
 import glob
+import json
 import os
 import re
 import sys
@@ -24,6 +25,7 @@ import _style as st  # noqa: E402
 import metrics as M  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+JSON_OUT = os.path.join(ROOT, "results", "imagenette_epoch_scan.json")
 TRIALS = 40
 
 
@@ -45,14 +47,20 @@ def scan():
         rows.append(r)
         print(f"  ep{ep:>3}  purity={r['purity']:.3f}  1-label diffusion={r['diffusion']*100:5.1f}%"
               f"  (euclid-1NN {r['euclid_1nn']*100:4.1f}%)")
+    if rows:                                            # persist so the figure is reproducible
+        with open(JSON_OUT, "w") as fh:                #   without the heavy per-epoch embeddings
+            json.dump(rows, fh, indent=2)
     return rows
 
 
 def main():
     rows = scan()
+    if not rows and os.path.exists(JSON_OUT):           # per-epoch npz are gitignored/local; fall
+        rows = json.load(open(JSON_OUT))                #   back to the shipped scan numbers
+        print(f"  (loaded {len(rows)} checkpoints from {os.path.relpath(JSON_OUT, ROOT)})")
     if not rows:
-        print("no data/imagenette_emb_ep*.npz found — run training with the updated "
-              "train_contrastive_imagenette.py first (it exports one per 25-epoch checkpoint).")
+        print("no data/imagenette_emb_ep*.npz and no results/imagenette_epoch_scan.json — run "
+              "training with the updated train_contrastive_imagenette.py first.")
         return
     ep = np.array([r["epoch"] for r in rows])
     dif = np.array([r["diffusion"] for r in rows])

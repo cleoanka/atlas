@@ -1,0 +1,38 @@
+{
+  "resnet18": {
+    "regimes": {
+      "seed_random": 61.8895966029724,
+      "medoid_plain": 78.47133757961784,
+      "medoid_mahalanobis": 78.92993630573248,
+      "medoid_snn": 79.38853503184713,
+      "medoid_mahalanobis_snn": 79.28662420382166,
+      "purity": 0.7530876729942815,
+      "bridges": 7297
+    },
+    "hubness": {
+      "kocc_skew": 0.9589472649872777,
+      "hub_max_occ": 47,
+      "dist_concentration": 0.07352753098774903,
+      "dim": 512
+    },
+    "ceiling": 83.3375796178344
+  },
+  "resnet50": {
+    "regimes": {
+      "seed_random": 58.242887473460705,
+      "medoid_plain": 77.171974522293,
+      "medoid_mahalanobis": 77.9872611464968,
+      "medoid_snn": 78.47133757961784,
+      "medoid_mahalanobis_snn": 78.54777070063695,
+      "purity": 0.737781278898517,
+      "bridges": 7656
+    },
+    "hubness": {
+      "kocc_skew": 0.9835912311245032,
+      "hub_max_occ": 41,
+      "dist_concentration": 0.05711681597123628,
+      "dim": 2048
+    },
+    "ceiling": 84.15286624203821
+  }
+}

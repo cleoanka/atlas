@@ -36,6 +36,13 @@
       "purity": 0.7543381721834533
     },
     {
+      "config": "processing: SNN bridge-kill",
+      "processing": "snn",
+      "acc": 0.6418174097664543,
+      "std": 0.08383039941320655,
+      "purity": 0.7530876729942815
+    },
+    {
       "config": "seed: density-peak",
       "seed": "density",
       "acc": 0.7803821656050955,
@@ -46,6 +53,14 @@
       "config": "seed: medoid",
       "seed": "medoid",
       "acc": 0.7847133757961784,
+      "std": 0.0,
+      "purity": 0.7530876729942815
+    },
+    {
+      "config": "medoid + SNN processing",
+      "seed": "medoid",
+      "processing": "snn",
+      "acc": 0.7938853503184713,
       "std": 0.0,
       "purity": 0.7530876729942815
     },

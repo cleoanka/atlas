@@ -18,8 +18,10 @@ LABELS = {
     "self_tuning scale": "self-tuning scale",
     "anisotropic α=1 (Laplace-Beltrami)": "anisotropic α=1  (Laplace–Beltrami)",
     "local Mahalanobis g(x)": "local Mahalanobis  g(x)  ← Riemannian",
+    "processing: SNN bridge-kill": "bridge-kill (SNN)  ← processing",
     "seed: density-peak": "seed: density-peak",
     "seed: medoid": "seed: medoid  ← most typical",
+    "medoid + SNN processing": "medoid + bridge-kill  ← seed + processing",
 }
 
 
@@ -46,10 +48,10 @@ def main():
     vm = [dm[k] for k in keys]
     vi = [di[k] for k in keys]
 
-    fig = plt.figure(figsize=(10.5, 6.6))
-    ax = fig.add_axes([0.34, 0.10, 0.62, 0.60])
+    fig = plt.figure(figsize=(10.8, 7.8))
+    ax = fig.add_axes([0.36, 0.09, 0.60, 0.63])
     st.header(fig, "What actually helps the same 10 labels",
-              "Δ accuracy vs baseline · metric upgrades ≈ flat · picking the typical seed is the lever",
+              "Δ accuracy vs baseline · metric ≈ flat · bridge-killing helps a little · the typical seed is the lever",
               accent=st.GREEN)
     h = 0.38
     ax.barh(y + h / 2, vm, height=h, color=st.BLUE, alpha=0.25, zorder=2)

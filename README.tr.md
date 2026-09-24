@@ -152,7 +152,7 @@ MNIST kolaydır. O yüzden dürüst test gerçek ImageNet fotoğrafları: [Image
   <img src="figures/imagenette_embedding.png" width="49%">
 </p>
 
-**Dürüst kapsam.** Az etiket **%61.9**'a ulaşır, tam-denetimli tavan **%83.3** (tüm ~9500 train etiketiyle lineer prob) — tavanın ~%74'ü, hâlâ MNIST'in ~%96'sının altında. Kalan boşluk etiketlerin değil, *temsilin* suçu: 9k görüntüde sıfırdan ResNet-18 hâlâ mütevazı bir metriktir; daha ağır bir kodlayıcı (ResNet-50, daha çok epoch, büyük batch — bkz. [`docs/TRAINING.md`](docs/TRAINING.md)) hem tavanı hem ulaşılan oranı yükseltir. Bütün mesele bu, yeniden ifade edilmiş hâli.
+**Dürüst kapsam.** Az etiket **%61.9**'a ulaşır, tam-denetimli tavan **%83.3** (tüm ~9500 train etiketiyle lineer prob) — tavanın ~%74'ü, hâlâ MNIST'in ~%96'sının altında. Kalan boşluk etiketlerin değil, *temsilin* suçu: 9k görüntüde sıfırdan ResNet-18 hâlâ mütevazı bir metriktir. Akla gelen ilk hamle — *sadece daha ağır bir encoder eğit* — kaldıraç **değil**: bir ResNet-50 (2048-B, 350 epoch) tavanı yükseltiyor ama az-etiket doğruluğunu *düşürüyor* (aşağıdaki **Encoder'ı büyütmek işe yarar mı?** bölümüne bak). Kazanç encoder boyutunda değil, grafta ve tohumda.
 
 ### MNIST'e karşı ImageNette (özet)
 
@@ -175,21 +175,57 @@ Eğitilmiş gömme (`data/imagenette_emb.npz`) repoda gelir; tablo ve figürler 
 
 ---
 
-## Daha fazlası — daha iyi cetvel mi, daha iyi seçilmiş etiket mi?
+## Daha fazlası — daha iyi cetvel mi, daha temiz graf mı, daha iyi seçilmiş etiket mi?
 
-İki doğal yükseltme, her biri dürüst ablasyon olarak ölçüldü (`src/enhance.py`, shipped gömmeler üzerinde):
+Üç ayrı kaldıraç, her biri dürüst ablasyon olarak ölçüldü (`src/enhance.py`, shipped gömmeler üzerinde) — bilerek ayrı tutuldu:
 
-1. **Riemann metriği** — tek global mesafe ölçeği yerine *yerel-uyarlanır, anizotropik* cetvel: self-tuning per-nokta ölçek, Coifman α=1 normalizasyonu (**Laplace–Beltrami** operatörünü = manifoldun içsel geometrisini geri verir), ve **yerel ters-kovaryans metrik tensörü** g(x) (Mahalanobis; "her yönün kendi ağırlığı").
-2. **Hangi noktayı etiketleyeceğini seçmek** — her örnek eşit iyi bir tohum değil. Sınıf başına **en tipik** noktayı (medoid / yoğunluk-tepesi) etiketle, rastgele değil.
+1. **Metrik (Riemann cetveli)** — tek global mesafe ölçeği yerine *yerel-uyarlanır, anizotropik* cetvel: self-tuning per-nokta ölçek, Coifman α=1 normalizasyonu (**Laplace–Beltrami** operatörünü = manifoldun içsel geometrisini geri verir), ve **yerel ters-kovaryans metrik tensörü** g(x) (Mahalanobis; "her yönün kendi ağırlığı"). *(İşaretli, zaman-benzeri eksenli bir pseudo-Riemann metriği bilinçli bir sonraki adım — burada kurulmadı.)*
+2. **İşleme (daha temiz graf)** — aynı tipiklik sinyali, ama yalnız tohum seçiminde değil, difüzyonun *içinde*: etiketin sızdığı atipik **köprü** kenarlarını bastır. Somut olarak, **paylaşılan-en-yakın-komşu** ağırlıklama — bir kenar, iki ucunun kaç komşuyu paylaştığıyla orantılı yaşar, böylece boşluk üstündeki köprüler kısılır. Yüksek-boyutlu kNN hubness'ine karşı da işe yarar.
+3. **Tohum (hangi noktayı etiketlemek)** — her örnek eşit iyi bir tohum değil. Sınıf başına **en tipik** noktayı (medoid / yoğunluk-tepesi — "bazı sandalyeler daha çok sandalye") etiketle, rastgele değil.
 
 <p align="center"><img src="figures/fig9_enhance.png" width="82%"></p>
 
 **Sayılar ne diyor (dürüstçe):**
 
 - **İyi bir temsilde daha iyi metrik neredeyse hiç yardım etmiyor.** Contrastive'de self-tuning ve cosine düz, α=1 ~1 puan bile kaybettiriyor — encoder aynı-sınıf noktaları zaten yan yana koymuş, mesafeyi yeniden ağırlıklandırmanın düzeltecek pek şeyi kalmamış. Yerel-Mahalanobis (Riemann) metriği tam da cetvelin kötü olduğu yerde küçük *gerçek* kazanç veriyor: **ImageNette'te +1.8 puan** (zayıf metrik), MNIST'te ~0. Daha iyi cetvel yalnız cetvel kötüyken işe yarar.
+- **Grafı temizlemek, kesilecek köprü olan yerde yardım eder.** SNN köprü-öldürme **ImageNette'te +2.3 puan** (rastgele tohum) katıyor, MNIST'te düz — çünkü onun grafı zaten neredeyse saf, kesilecek bir şey yok. Gerçek ama mütevazı bir kaldıraç, ve iyi bir tohumun üstüne biniyor (yalnız medoid 78.5 → **medoid + SNN 79.4**, dürüst en iyi).
 - **Asıl kaldıraç: hangi etiketi seçtiğin.** En tipik noktayı (rastgele yerine) tohumlamak **MNIST 94.7 → 97.0 (+2.3)** ve **ImageNette 61.9 → 78.5 (+16.6)** — neredeyse %83.3 tavanına. Düşük-saflıklı grafta rastgele tohum çoğu zaman atipik, sınırdaki bir görsele düşüp yanlış bölgeyi sular; prototip çekirdekte oturup temiz yayılır. Buradaki tipiklik **etiketsiz** ölçülür (graf derecesi / medoid), yani adil bir az-etiket hamlesi — ve tam olarak aktif öğrenme.
 
-Çıkarım: temsil iyi olduğunda marjinal kazanç, hesapladığın mesafede değil, **seçtiğin etikettedir**. (Başlık tablosu karşılaştırılabilirlik için kötümser *rastgele* tohumu tutar; bu, pratikte kullanacağın ek.)
+Çıkarım: temsil iyi olduğunda marjinal kazanç, hesapladığın mesafede değil, **seçtiğin etikette** ve **kestiğin köprülerde**. (Başlık tablosu karşılaştırılabilirlik için kötümser *rastgele* tohumu tutar; pratikte kullanacağın ek: medoid + SNN.)
+
+---
+
+## Encoder'ı büyütmek işe yarar mı? — ResNet-18 vs ResNet-50
+
+%61.9'u aşmanın bariz yolu daha büyük bir encoder. O yüzden birini eğittik: bir **ResNet-50** (2048-B, 350 epoch, aynı denetimsiz contrastive reçetesi), aynı protokolle değerlendirildi. Sonuç temiz bir negatif — ve tezi keskinleştiriyor.
+
+<p align="center"><img src="figures/imagenette_encoder_comparison.png" width="88%"></p>
+
+**Büyük encoder tavanı yükseltiyor ama az-etiketi *düşürüyor*.** Tam-etiket lineer tavanı biraz çıkıyor (%83.3 → **%84.2**), yani gerçekten *daha çok* lineer-çözülebilir bilgi paketliyor. Ama az-etiket difüzyonu **her** adil rejimde düşüyor — ve açık yalnızca bir test artefaktı değil:
+
+| rejim (1 etiket/sınıf) | ResNet-18 (512-B) | ResNet-50 (2048-B) |
+|---|--:|--:|
+| rastgele tohum | %61.9 | %58.2 |
+| medoid tohum | %78.5 | %77.2 |
+| + Mahalanobis (metrik) | %78.9 | %78.0 |
+| + SNN köprü-öldürme (işleme) | %79.4 | %78.5 |
+| + hepsi | %79.3 | %78.5 |
+| **tam-etiket tavanı** | %83.3 | **%84.2** |
+
+Rastgele tohumdan tipik (medoid) tohuma geçmek görünürdeki açığın çoğunu kapatıyor (3.7 → ~1.3 puan) — rastgele-tohum testi gerçekten büyük modele haksızdı. Metrik ve işleme kaldıraçları sonra 2048-B encoder'a 512-B'den *daha çok* yarıyor (onarılacak hasar daha fazla), yine de **~1 puan geride** kalıyor.
+
+**Büyük encoder neden biraz daha kötü bir *metrik* (fikirler, ölçülenler işaretli).**
+
+- **Mesafe yoğunlaşması (ölçüldü).** 2048-B'de ikili mesafelerin yayılımı çöküyor — std/mean **0.074 → 0.057**. Uzak ve yakın mesafeler birbirine yaklaşınca "en yakın" komşu daha az güvenilir bir aynı-sınıf oyu olur, dolayısıyla **kenar saflığı düşer (0.753 → 0.738)** ve **sınıflar-arası köprüler artar (7297 → 7656)**. Az-etiket difüzyonu *yerel, nonparametrik* bir okuyucudur ve kNN saflığına dayanır — bu yüzden global lineer ayrılabilirlik (tavan) artsa bile bozulur. Kritik nokta bu: lineer-prob doğruluğu ile kNN-graf kalitesi bir temsilin *farklı* özellikleridir.
+- **Bunu hedefleyen kaldıraçlar ona en çok yardım ediyor (ölçüldü).** Mahalanobis (yerel cetvel) ve SNN (köprü kesme) 2048-B encoder'a 512-B'den daha çok yarıyor (+0.8/+1.3 vs +0.4/+0.9) — yoğunlaşma/köprülerin gerçek hasar olduğuyla tutarlı — ama geçmeye yetmiyor.
+- **Kapasite vs veri (makul).** ~9.5k görüntüde 25M-parametreli ResNet-50, lineer-çözülebilir ama daha az yerel dağılan augmentasyon-*kısayolları* öğrenebilir; epoch taraması az-etiket metriğinin ~ep200'de platoladığını ve daha yükselmediğini gösteriyor.
+- **Reçete küçük ağa göre ayarlı (makul).** Sıcaklık, projektör genişliği ve batch boyutu ResNet-18 için ayarlandı; 2048-B uzay farklı bir τ / yalnız lineer ayrılabilirliği değil *yerel* yapıyı koruyan bir projektör ya da whitening isteyebilir.
+
+**Kaç epoch? Loss'tan değil, metrikten oku.** Contrastive loss düşmeye devam eder ve overfitting'i asla göstermez, o yüzden her checkpoint'te doğrulama gömmesini export edip doğrudan *az-etiket* metriğini puanlıyoruz (`figures/make_imagenette_epoch_scan.py`). ~ep200'de platoluyor (tepe ~ep225, %58.3) — büyük encoder'ın her epoch'u ResNet-18 çizgisinin altında.
+
+<p align="center"><img src="figures/imagenette_epoch_scan.png" width="70%"></p>
+
+**Nokta, yeniden.** Encoder'ı ölçeklemek daha yüksek bir tavan ama daha gürültülü bir graf getirdi — ve az-etiket öğrenme grafın üstünde yaşıyor. Kaldıraç hâlâ *hangi noktayı etiketlediğin* ve *hangi köprüleri kestiğin*, encoder'ın ne kadar büyük olduğu değil. Manşet olarak ResNet-18 kalıyor; ResNet-50 gömmesi `data/imagenette_emb_resnet50.npz` olarak geliyor ki tüm karşılaştırma yeniden üretilebilsin (`python src/encoder_comparison.py`) — GPU'suz.
 
 ---
 

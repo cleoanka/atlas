@@ -142,6 +142,11 @@ def phase():
 
 def main():
     representation(); headline(); embedding(); phase()
+    # experiment figures (skip gracefully if their result JSONs aren't present yet)
+    import make_encoder_comparison
+    import make_imagenette_epoch_scan
+    make_encoder_comparison.main()
+    make_imagenette_epoch_scan.main()
 
 
 if __name__ == "__main__":

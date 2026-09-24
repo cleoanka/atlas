@@ -162,7 +162,7 @@ MNIST is easy. So the honest test is real ImageNet photos: [ImageNette](https://
   <img src="figures/imagenette_embedding.png" width="49%">
 </p>
 
-**Honest scope.** Few labels reach **61.9%** against a fully-supervised ceiling of **83.3%** (linear probe on all ~9500 train labels) — ~74% of the ceiling, still short of MNIST's ~96%. That remaining gap is the *representation's* fault, not the labels': a from-scratch ResNet-18 on 9k images is still a modest metric, and the bars above show a modest metric caps how far ten labels can travel. A heavier encoder (ResNet-50, more epochs, bigger batch — see [`docs/TRAINING.md`](docs/TRAINING.md)) raises both the ceiling and the reachable fraction. That is the whole point, restated.
+**Honest scope.** Few labels reach **61.9%** against a fully-supervised ceiling of **83.3%** (linear probe on all ~9500 train labels) — ~74% of the ceiling, still short of MNIST's ~96%. That remaining gap is the *representation's* fault, not the labels': a from-scratch ResNet-18 on 9k images is still a modest metric, and the bars above show a modest metric caps how far ten labels can travel. The tempting next move — *just train a heavier encoder* — turns out **not** to be the lever: a ResNet-50 (2048-D, 350 epochs) raises the ceiling yet *lowers* few-label accuracy (see [Does scaling the encoder help?](#does-scaling-the-encoder-help--resnet-18-vs-resnet-50) below). The gains are in the graph and the seed, not the encoder size.
 
 ### MNIST vs ImageNette (summary)
 
@@ -185,21 +185,57 @@ The trained embedding (`data/imagenette_emb.npz`) ships in the repo, so the tabl
 
 ---
 
-## Squeezing more — a better ruler, or a better-chosen label?
+## Squeezing more — a better ruler, a cleaner graph, or a better-chosen label?
 
-Two natural upgrades, each measured as an honest ablation (`src/enhance.py`) on the shipped embeddings:
+Three distinct levers, each measured as an honest ablation (`src/enhance.py`) on the shipped embeddings — kept separate on purpose:
 
-1. **A Riemannian metric** — replace the one global distance scale with a *locally-adaptive, anisotropic* ruler: a self-tuning per-point scale, Coifman's α=1 normalisation (which recovers the **Laplace–Beltrami** operator — the manifold's intrinsic geometry), and a **local inverse-covariance metric tensor** g(x) (Mahalanobis; "each direction gets its own weight").
-2. **Choosing which point to label** — not every example is an equally good seed. Label the **most typical** point per class (the class medoid / density peak) instead of a random one.
+1. **The metric (a Riemannian ruler)** — replace the one global distance scale with a *locally-adaptive, anisotropic* ruler: a self-tuning per-point scale, Coifman's α=1 normalisation (which recovers the **Laplace–Beltrami** operator — the manifold's intrinsic geometry), and a **local inverse-covariance metric tensor** g(x) (Mahalanobis; "each direction gets its own weight"). *(A signed, time-like axis — a pseudo-Riemannian metric — is a deliberate future step, not built here.)*
+2. **The processing (a cleaner graph)** — the same typicality signal, but used *inside* the diffusion rather than only to pick seeds: down-weight the atypical **bridge** edges label mass leaks through. Concretely, **shared-nearest-neighbour** weighting — an edge survives in proportion to how many neighbours its two endpoints share, so bridges across a gap are muted. This also fights high-dimensional kNN hubness.
+3. **The seed (which point to label)** — not every example is an equally good seed. Label the **most typical** point per class (the class medoid / density peak — "some chairs are more chair") instead of a random one.
 
 <p align="center"><img src="figures/fig9_enhance.png" width="82%"></p>
 
 **What the numbers say (honestly):**
 
 - **A better metric barely helps an already-good representation.** On contrastive features the self-tuning and cosine variants are flat, α=1 even costs ~1 point — the encoder already put same-class points together, so re-weighting distances has little left to fix. The local-Mahalanobis (Riemannian) metric gives a small *real* gain exactly where the ruler was worse: **+1.8 pts on ImageNette** (weaker metric), ~0 on MNIST. A better ruler helps only where the ruler was bad.
+- **Cleaning the graph helps where there are bridges to cut.** SNN bridge-killing adds **+2.3 pts on ImageNette** (random seed) and is flat on MNIST — whose graph is already near-pure, so there is nothing to cut. It is a real but modest lever, and it stacks on top of a good seed (medoid alone 78.5 → **medoid + SNN 79.4**, the honest best).
 - **Which label you pick is the big lever.** Seeding the *most typical* point instead of a random one lifts **MNIST 94.7 → 97.0 (+2.3)** and **ImageNette 61.9 → 78.5 (+16.6)** — nearly to the 83.3% ceiling. On a lower-purity graph a random seed often lands on an atypical, boundary image and floods the wrong region; the prototype sits in the dense core and propagates cleanly. Typicality here is measured *without labels* (graph degree / medoid), so it's a fair few-label move — and it's exactly active learning.
 
-Takeaway: once the representation is good, the marginal returns are in the **label you choose**, not the distance you compute. (The headline table keeps the pessimistic *random* seed for comparability; this is the add-on you'd use in practice.)
+Takeaway: once the representation is good, the marginal returns are in the **label you choose** and the **bridges you cut**, not the distance you compute. (The headline table keeps the pessimistic *random* seed for comparability; medoid + SNN is the add-on you'd use in practice.)
+
+---
+
+## Does scaling the encoder help? — ResNet-18 vs ResNet-50
+
+The obvious way to push past 61.9% is a bigger encoder. So we trained one: a **ResNet-50** (2048-D, 350 epochs, same unsupervised contrastive recipe), evaluated with the identical protocol. The result is a clean negative — and it sharpens the thesis.
+
+<p align="center"><img src="figures/imagenette_encoder_comparison.png" width="88%"></p>
+
+**The bigger encoder raises the ceiling and *lowers* few-label.** Its full-label linear ceiling edges up (83.3% → **84.2%**), so it genuinely packs *more* linearly-decodable information. But its few-label diffusion drops at **every** fair regime — and the gap is not just a testing artefact:
+
+| regime (1 label/class) | ResNet-18 (512-D) | ResNet-50 (2048-D) |
+|---|--:|--:|
+| random seed | 61.9% | 58.2% |
+| medoid seed | 78.5% | 77.2% |
+| + Mahalanobis (metric) | 78.9% | 78.0% |
+| + SNN bridge-kill (processing) | 79.4% | 78.5% |
+| + both | 79.3% | 78.5% |
+| **full-label ceiling** | 83.3% | **84.2%** |
+
+Switching from a random seed to the typical (medoid) seed closes most of the apparent gap (3.7 → ~1.3 pts) — random-seed testing really was unfair to the bigger model. The metric and processing levers then help the 2048-D encoder *more* than the 512-D one (there is more damage to repair), yet it still lands **~1 point behind**.
+
+**Why a bigger encoder is a slightly worse *metric* (some ideas, measured where noted).**
+
+- **Distance concentration (measured).** In 2048-D the spread of pairwise distances collapses — std/mean falls **0.074 → 0.057**. When far and near distances bunch together, the "nearest" neighbour is a less reliable same-class vote, so **edge purity drops (0.753 → 0.738)** and **cross-class bridges rise (7297 → 7656)**. Few-label diffusion is a *local, nonparametric* reader that rides on kNN purity, so it degrades even as global linear separability (the ceiling) improves. This is the crux: linear-probe accuracy and kNN-graph quality are *different* properties of a representation.
+- **The levers that target this help it most (measured).** Mahalanobis (a local ruler) and SNN (cutting bridges) each help the 2048-D encoder more than the 512-D one (+0.8/+1.3 vs +0.4/+0.9) — consistent with concentration/bridges being the actual damage — just not enough to overtake.
+- **Capacity vs data (plausible).** A 25M-parameter ResNet-50 on only ~9.5k images can learn augmentation-invariant *shortcuts* that are linearly decodable but distribute features less locally; the epoch scan shows the few-label metric plateaus by ~ep200 and never climbs further.
+- **Recipe tuned for the smaller net (plausible).** Temperature, projector width and batch size were set for ResNet-18; a 2048-D space may want a different τ / a projector or whitening that preserves *local* structure, not just linear separability.
+
+**How many epochs? Read it off the metric, not the loss.** Contrastive loss keeps falling and never flags overfitting, so we export the validation embedding at every checkpoint and score the *few-label* metric directly (`figures/make_imagenette_epoch_scan.py`). It plateaus by ~ep200 (peak ~ep225, 58.3%) — every epoch of the bigger encoder sits below the ResNet-18 line.
+
+<p align="center"><img src="figures/imagenette_epoch_scan.png" width="70%"></p>
+
+**The point, restated.** Scaling the encoder bought a higher ceiling but a noisier graph — and few-label learning lives on the graph. The lever remains *which point you label* and *which bridges you cut*, not how big the encoder is. ResNet-18 stays the shipped headline; the ResNet-50 embedding ships as `data/imagenette_emb_resnet50.npz` so the whole comparison reproduces (`python src/encoder_comparison.py`) — GPU-free.
 
 ---
 
