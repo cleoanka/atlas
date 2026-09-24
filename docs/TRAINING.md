@@ -13,6 +13,25 @@ The device is auto-detected: **MPS → CUDA → CPU**. Mixed precision (AMP) tur
 
 ---
 
+## Easiest path: Google Colab (free GPU, zero setup)
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cleoanka/atlas/blob/main/notebooks/train_colab.ipynb)
+
+Open `notebooks/train_colab.ipynb` in Colab, set `Runtime → Change runtime type → T4 GPU`, and
+`Run all`. It clones the repo, fetches ImageNette, trains, evaluates, and offers the trained
+embedding + `.pt` for download. Notes:
+
+- **T4 = 16 GB VRAM**, *more* than an RTX 5070 Laptop (8 GB) — so `--batch 512 @ 160px` fits, and
+  even `--backbone resnet50` is comfortable. Colab ships CUDA PyTorch, so there's **no cu128 /
+  Blackwell setup** to worry about.
+- ~300 epochs ≈ 30–60 min on a T4; an L4/A100 (paid) is much faster.
+- Colab is **ephemeral** — download the artifacts (or mount Drive) before the session ends; the
+  notebook's last cell does this for you.
+
+For a permanent local setup, or to use your own NVIDIA card, read on.
+
+---
+
 ## Faster vs. better — read this first
 
 - **A faster GPU does not make the model more accurate by itself.** The same config gives ~the same

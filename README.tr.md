@@ -105,7 +105,9 @@ python src/sweep.py             # saflık + bütçe      -> results/sweep.json
 python figures/make_figures.py  # tüm figürler (kapak GIF'i dahil)
 ```
 
-Contrastive gömme ve değerlendirme bölmesi repoda gelir; her sayı **GPU olmadan** yeniden üretilir (MNIST ilk kullanımda kendini indirir). Kodlayıcıyı yeniden eğit: `pip install torch && python src/train_contrastive.py 40` (MPS / CUDA / CPU otomatik). Tam Mac/NVIDIA kurulumu: [`docs/TRAINING.md`](docs/TRAINING.md). 5 hücrelik tur: [`notebooks/demo.ipynb`](notebooks/demo.ipynb).
+Contrastive gömme ve değerlendirme bölmesi repoda gelir; her sayı **GPU olmadan** yeniden üretilir (MNIST ilk kullanımda kendini indirir). Kodlayıcıyı yeniden eğit: `pip install torch && python src/train_contrastive.py 40` (MPS / CUDA / CPU otomatik).
+
+**Tarayıcıda ücretsiz GPU ile eğit** — kurulum yok, T4 (16 GB): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cleoanka/atlas/blob/main/notebooks/train_colab.ipynb) &nbsp; Tam Mac/NVIDIA (CUDA, RTX 50-serisi dahil) kurulumu: [`docs/TRAINING.md`](docs/TRAINING.md). 5 hücrelik tur: [`notebooks/demo.ipynb`](notebooks/demo.ipynb).
 
 ---
 

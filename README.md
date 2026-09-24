@@ -55,7 +55,9 @@ python src/sweep.py    --dataset imagenette
 python figures/make_imagenette_figures.py     # regenerate the ImageNette figures
 ```
 
-Everything reproduces **without a GPU**: the trained embeddings (`contrastive_emb.npz`, `data/imagenette_emb.npz`) ship in the repo; the raw datasets download themselves only if you retrain. To retrain an encoder yourself: `pip install torch` then `python src/train_contrastive.py 40` (MNIST) or `python src/train_contrastive_imagenette.py --epochs 300 --img 160 --batch 512` (ImageNette; device auto: MPS / CUDA / CPU, mixed-precision on CUDA, `--backbone resnet50` for more capacity). **Full Mac (MPS) and NVIDIA (CUDA, incl. RTX 50-series) setup — installs, VRAM guidance, recommended configs — is in [`docs/TRAINING.md`](docs/TRAINING.md).** A 5-cell walk-through is in [`notebooks/demo.ipynb`](notebooks/demo.ipynb).
+Everything reproduces **without a GPU**: the trained embeddings (`contrastive_emb.npz`, `data/imagenette_emb.npz`) ship in the repo; the raw datasets download themselves only if you retrain. To retrain an encoder yourself: `pip install torch` then `python src/train_contrastive.py 40` (MNIST) or `python src/train_contrastive_imagenette.py --epochs 300 --img 160 --batch 512` (ImageNette; device auto: MPS / CUDA / CPU, mixed-precision on CUDA, `--backbone resnet50` for more capacity).
+
+**Train on a free GPU in the browser** — no setup, T4 (16 GB): [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cleoanka/atlas/blob/main/notebooks/train_colab.ipynb) &nbsp; Full Mac (MPS) & NVIDIA (CUDA, incl. RTX 50-series) setup — installs, VRAM guidance, recommended configs — is in [`docs/TRAINING.md`](docs/TRAINING.md). A 5-cell walk-through of the idea is in [`notebooks/demo.ipynb`](notebooks/demo.ipynb).
 
 **Layout.** `src/` — representations, the metric protocol (`metrics.py`), evaluation, sweep, trainers. `figures/` — one `make_figN_*.py` per figure (`make_figures.py` runs all). `results/` — the JSON numbers (source of truth). `notebooks/demo.ipynb` — the idea in five cells.
 
