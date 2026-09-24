@@ -3,6 +3,9 @@ mnist.npz
 *.ckpt
 *.pt
 checkpoints/
+# local handoff / working notes (never publish)
+HANDOFF.md
+atlas_out.zip
 # environments & caches
 .venv/
 __pycache__/
