@@ -18,5 +18,6 @@ data/imagenette2-160/
 data/imagenette2-160.tgz
 data/imagenette_train_*.npz
 data/imagenette_eval_*.npz
+data/imagenette_emb_ep*.npz
 !data/imagenette_emb.npz
 !data/imagenette_train_emb.npz

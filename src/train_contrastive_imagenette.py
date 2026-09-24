@@ -195,6 +195,29 @@ def main():
                     "arch": a.backbone, "img": a.img, "epochs": a.epochs,
                     "epochs_done": ep_done, "dim": dim}, ckpt)
 
+    def embed(Xu8):
+        """Embed uint8 images (center region, no aug), L2-normalised. Assumes enc in eval mode."""
+        X = torch.from_numpy(Xu8).to(DEV).permute(0, 3, 1, 2).float() / 255.0
+        outs = []
+        with torch.no_grad():
+            for i in range(0, len(X), 256):
+                outs.append(F.normalize(enc(X[i:i + 256]), dim=1))
+        return torch.cat(outs).cpu().numpy().astype("float32")
+
+    # Validation pool, cached once. We export its embedding at EVERY checkpoint (not just at the
+    # end) so the optimum epoch can be read off downstream — SSL contrastive loss never shows an
+    # overfitting bump, so "when to stop" is a downstream question (edge purity / few-label acc vs
+    # epoch), answered by figures/make_imagenette_epoch_scan.py on these per-epoch embeddings.
+    Xev_np, yev = D.eval_cache(a.img)
+    data_dir = os.path.join(_ROOT, "data")
+
+    def export_val_emb(path):
+        was_training = enc.training
+        enc.eval()
+        np.savez_compressed(path, emb=embed(Xev_np), y=yev)
+        if was_training:
+            enc.train()
+
     enc.train(); head.train()
     for ep in range(a.epochs):
         perm = torch.randperm(n, device=DEV); t0 = time.time(); tot = 0.0; nb = 0
@@ -211,27 +234,18 @@ def main():
             sch.step(); tot += loss.item(); nb += 1
         print(f"  ep{ep+1}/{a.epochs} loss={tot/nb:.4f} {time.time()-t0:.0f}s", flush=True)
         if (ep + 1) % 25 == 0:                      # periodic checkpoint — survive a preemption
-            save_ckpt(ep + 1); print(f"  [ckpt @ ep{ep+1}]", flush=True)
+            save_ckpt(ep + 1)
+            export_val_emb(os.path.join(data_dir, f"imagenette_emb_ep{ep+1}.npz"))
+            print(f"  [ckpt @ ep{ep+1}  +val-emb]", flush=True)
 
     # final encoder weights (local keepsake; .pt is gitignored)
     torch.save({"encoder": enc.state_dict(), "head": head.state_dict(),
                 "arch": a.backbone, "img": a.img, "epochs": a.epochs, "dim": dim}, ckpt)
     print(f"saved -> models/imagenette_encoder.pt", flush=True)
 
-    # embed a set of uint8 images (center region, no aug), L2-normalised
-    enc.eval()
-
-    def embed(Xu8):
-        X = torch.from_numpy(Xu8).to(DEV).permute(0, 3, 1, 2).float() / 255.0
-        outs = []
-        with torch.no_grad():
-            for i in range(0, len(X), 256):
-                outs.append(F.normalize(enc(X[i:i + 256]), dim=1))
-        return torch.cat(outs).cpu().numpy().astype("float32")
-
     # validation pool → the evaluation embedding (shipped)
-    Xev_np, yev = D.eval_cache(a.img)
-    np.savez_compressed(os.path.join(_ROOT, "data", "imagenette_emb.npz"),
+    enc.eval()
+    np.savez_compressed(os.path.join(data_dir, "imagenette_emb.npz"),
                         emb=embed(Xev_np), y=yev)
     print(f"done -> imagenette_emb.npz ({len(yev)}, 512)", flush=True)
     # train pool (center-crop to img) → embeddings for the proper full-train linear-probe ceiling
