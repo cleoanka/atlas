@@ -187,6 +187,14 @@ def main():
     scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
     amp_dev = "cuda" if DEV == "cuda" else "cpu"
 
+    ckpt = os.path.join(_ROOT, "models", "imagenette_encoder.pt")
+    os.makedirs(os.path.dirname(ckpt), exist_ok=True)
+
+    def save_ckpt(ep_done):
+        torch.save({"encoder": enc.state_dict(), "head": head.state_dict(),
+                    "arch": a.backbone, "img": a.img, "epochs": a.epochs,
+                    "epochs_done": ep_done, "dim": dim}, ckpt)
+
     enc.train(); head.train()
     for ep in range(a.epochs):
         perm = torch.randperm(n, device=DEV); t0 = time.time(); tot = 0.0; nb = 0
@@ -202,10 +210,10 @@ def main():
                 loss.backward(); opt.step()
             sch.step(); tot += loss.item(); nb += 1
         print(f"  ep{ep+1}/{a.epochs} loss={tot/nb:.4f} {time.time()-t0:.0f}s", flush=True)
+        if (ep + 1) % 25 == 0:                      # periodic checkpoint — survive a preemption
+            save_ckpt(ep + 1); print(f"  [ckpt @ ep{ep+1}]", flush=True)
 
-    # save the trained encoder weights (local keepsake; .pt is gitignored)
-    ckpt = os.path.join(_ROOT, "models", "imagenette_encoder.pt")
-    os.makedirs(os.path.dirname(ckpt), exist_ok=True)
+    # final encoder weights (local keepsake; .pt is gitignored)
     torch.save({"encoder": enc.state_dict(), "head": head.state_dict(),
                 "arch": a.backbone, "img": a.img, "epochs": a.epochs, "dim": dim}, ckpt)
     print(f"saved -> models/imagenette_encoder.pt", flush=True)
