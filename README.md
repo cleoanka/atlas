@@ -31,12 +31,12 @@ You have thousands of images and can label only a handful. Instead of *training 
 
 ## Why it works
 
-**Euclidean distance lies on a manifold.** Two digits can be close in pixel space yet belong to different classes, because the straight line between them cuts across the gap between two folds. Nearest-neighbour in that metric is wrong wherever the folds come close.
+**A distance is only as honest as the space it lives in.** In raw pixel space two photos count as "close" when they share colour and layout — so a gas pump lands next to a golf ball, a church, a parachute. Nearest-neighbour on that metric is wrong almost everywhere. Learn an unsupervised embedding first and "close" starts to mean *the same thing*.
 
-<p align="center"><img src="figures/fig1_why_euclid_fails.png" width="80%"></p>
-<p align="center"><em>Same point, same neighbourhood size. The straight-line ball grabs 42 points from the other arm; the graph neighbourhood grabs 0 — it follows the manifold.</em></p>
+<p align="center"><img src="figures/fig1_why_euclid_fails.png" width="88%"></p>
+<p align="center"><em>One real ImageNette photo and its 8 nearest neighbours, in two vector spaces. Raw pixels: every neighbour is a different class (0/8). The learned 512-D embedding: every neighbour is the same class (8/8). Same photo, same k — only the space changed. Across all 3,925 images, same-class neighbours climb from 21% to 77%.</em></p>
 
-**A graph fixes the metric.** Connect each point to its k nearest neighbours and let a label *flow along the edges* instead of jumping in a straight line. Now "near" means *reachable along the data*. From one seed per class, that flow paints the whole dataset — as long as edges mostly connect same-class points. The single number that decides everything is **edge purity**.
+**A graph turns a good metric into labels.** Connect each point to its k nearest neighbours and let a label *flow along the edges* instead of jumping in a straight line. Now "near" means *reachable along the data*. From one seed per class, that flow paints the whole dataset — as long as edges mostly connect same-class points. The single number that decides everything is **edge purity**, and edge purity is a property of the representation, not the classifier.
 
 ---
 
@@ -65,7 +65,7 @@ Everything reproduces **without a GPU**: the trained embeddings (`contrastive_em
 
 ## The mechanism — the math
 
-**The graph.** Embed each of the $n$ points with a representation $\phi$, join every point to its $k$ nearest neighbours, weight each edge by a Gaussian kernel, symmetrise ($W=W^{\top}$), and normalise with the degree matrix $D=\operatorname{diag}(\sum_j W_{ij})$:
+**The graph.** Embed each of the $n$ points with a representation $\phi$, join every point to its $k$ nearest neighbours, weight each edge by a Gaussian kernel, symmetrise ($W=W^{\top}$), and normalise with the degree matrix $D=\mathrm{diag}(\sum_j W_{ij})$:
 
 $$W_{ij} = \exp\!\left(-\frac{\lVert \phi_i-\phi_j\rVert^2}{2\sigma^2}\right),\qquad S = D^{-1/2}\,W\,D^{-1/2}.$$
 

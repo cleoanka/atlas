@@ -29,18 +29,18 @@ Binlerce görselin var, ama sadece bir avucunu etiketleyebiliyorsun. *Sınıflan
 
 ## Neden çalışır
 
-**Öklid mesafesi manifoldda yalan söyler.** İki rakam piksel uzayında yakın ama farklı sınıflardan olabilir — çünkü aralarındaki düz çizgi iki katman arasındaki boşluğu keser. O metrikteki en-yakın-komşu, katmanların yaklaştığı her yerde yanılır.
+**Bir mesafe, yaşadığı uzay kadar dürüsttür.** Ham piksel uzayında iki fotoğraf renk ve yerleşimi paylaştığında "yakın" sayılır — bu yüzden bir benzin pompası bir golf topunun, bir kilisenin, bir paraşütün yanına düşer. O metrikteki en-yakın-komşu neredeyse her yerde yanılır. Önce denetimsiz bir gömme öğren; "yakın" artık *aynı şey* demeye başlar.
 
-<p align="center"><img src="figures/fig1_why_euclid_fails.png" width="80%"></p>
-<p align="center"><em>Aynı nokta, aynı komşuluk büyüklüğü. Düz-çizgi topu diğer koldan 42 nokta kapar; graf komşuluğu 0 — manifoldu takip eder.</em></p>
+<p align="center"><img src="figures/fig1_why_euclid_fails.png" width="88%"></p>
+<p align="center"><em>Gerçek bir ImageNette fotoğrafı ve iki vektör uzayındaki 8 en yakın komşusu. Ham piksel: her komşu farklı bir sınıf (0/8). Öğrenilmiş 512-boyutlu gömme: her komşu aynı sınıf (8/8). Aynı fotoğraf, aynı k — sadece uzay değişti. 3.925 görüntünün tamamında aynı-sınıf komşu oranı %21'den %77'ye çıkıyor.</em></p>
 
-**Graf metriği düzeltir.** Her noktayı k en yakın komşusuna bağla ve etiketin düz çizgide sıçraması yerine *kenarlar boyunca akmasına* izin ver. Artık "yakın" demek *veri boyunca ulaşılabilir* demektir. Sınıf başına tek tohumdan başlayan bu akış tüm veriyi boyar — yeter ki kenarlar çoğunlukla aynı sınıftan noktaları bağlasın. Her şeye karar veren tek sayı **kenar saflığıdır**.
+**Graf, iyi bir metriği etikete çevirir.** Her noktayı k en yakın komşusuna bağla ve etiketin düz çizgide sıçraması yerine *kenarlar boyunca akmasına* izin ver. Artık "yakın" demek *veri boyunca ulaşılabilir* demektir. Sınıf başına tek tohumdan başlayan bu akış tüm veriyi boyar — yeter ki kenarlar çoğunlukla aynı sınıftan noktaları bağlasın. Her şeye karar veren tek sayı **kenar saflığıdır** ve kenar saflığı, sınıflandırıcının değil, temsilin bir özelliğidir.
 
 ---
 
 ## Mekanizma — matematiği
 
-**Graf.** $n$ noktanın her birini bir $\phi$ temsiliyle göm, her noktayı $k$ en yakın komşusuna bağla, her kenarı Gauss çekirdeğiyle ağırlıklandır, simetrikleştir ($W=W^{\top}$) ve derece matrisi $D=\operatorname{diag}(\sum_j W_{ij})$ ile normalize et:
+**Graf.** $n$ noktanın her birini bir $\phi$ temsiliyle göm, her noktayı $k$ en yakın komşusuna bağla, her kenarı Gauss çekirdeğiyle ağırlıklandır, simetrikleştir ($W=W^{\top}$) ve derece matrisi $D=\mathrm{diag}(\sum_j W_{ij})$ ile normalize et:
 
 $$W_{ij} = \exp\!\left(-\frac{\lVert \phi_i-\phi_j\rVert^2}{2\sigma^2}\right),\qquad S = D^{-1/2}\,W\,D^{-1/2}.$$
 
